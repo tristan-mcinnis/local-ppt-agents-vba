@@ -1,0 +1,446 @@
+{
+  "template_info": {
+    "name": "Standard Template.pptx",
+    "path": "/path/to/template.pptx",
+    "analysis_date": "2024-01-15T10:30:00Z",
+    "analyzer_version": "3.1",
+    "platform": "macOS",
+    "slide_count": 0,
+    "slide_master": {
+      "name": "Office Theme",
+      "layout_count": 11,
+      "theme_name": "Office Theme"
+    }
+  },
+  "layouts": [
+    {
+      "index": 1,
+      "name": "Title Slide",
+      "category": "title",
+      "placeholder_count": 2,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 1,
+          "type_name": "CenterTitle",
+          "type_id": 3,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 171.0,
+            "width": 612.0,
+            "height": 90.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 2,
+          "type_name": "Subtitle",
+          "type_id": 4,
+          "index": 1,
+          "geometry": {
+            "left": 66.0,
+            "top": 306.0,
+            "width": 588.0,
+            "height": 90.0
+          },
+          "has_text_frame": true
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Title and Content",
+      "category": "content",
+      "placeholder_count": 2,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 3,
+          "type_name": "Title",
+          "type_id": 1,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 29.0,
+            "width": 612.0,
+            "height": 65.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 4,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 1,
+          "geometry": {
+            "left": 54.0,
+            "top": 110.0,
+            "width": 612.0,
+            "height": 350.0
+          },
+          "has_text_frame": true
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Section Header",
+      "category": "section",
+      "placeholder_count": 2,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 5,
+          "type_name": "Title",
+          "type_id": 1,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 171.0,
+            "width": 612.0,
+            "height": 90.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 6,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 1,
+          "geometry": {
+            "left": 66.0,
+            "top": 306.0,
+            "width": 588.0,
+            "height": 90.0
+          },
+          "has_text_frame": true
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Two Content",
+      "category": "two-content",
+      "placeholder_count": 3,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 7,
+          "type_name": "Title",
+          "type_id": 1,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 29.0,
+            "width": 612.0,
+            "height": 65.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 8,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 1,
+          "geometry": {
+            "left": 54.0,
+            "top": 110.0,
+            "width": 294.0,
+            "height": 350.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 9,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 2,
+          "geometry": {
+            "left": 372.0,
+            "top": 110.0,
+            "width": 294.0,
+            "height": 350.0
+          },
+          "has_text_frame": true
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Comparison",
+      "category": "comparison",
+      "placeholder_count": 5,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 10,
+          "type_name": "Title",
+          "type_id": 1,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 13.0,
+            "width": 612.0,
+            "height": 65.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 11,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 1,
+          "geometry": {
+            "left": 54.0,
+            "top": 110.0,
+            "width": 273.0,
+            "height": 26.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 12,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 2,
+          "geometry": {
+            "left": 393.0,
+            "top": 110.0,
+            "width": 273.0,
+            "height": 26.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 13,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 3,
+          "geometry": {
+            "left": 54.0,
+            "top": 152.0,
+            "width": 273.0,
+            "height": 308.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 14,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 4,
+          "geometry": {
+            "left": 393.0,
+            "top": 152.0,
+            "width": 273.0,
+            "height": 308.0
+          },
+          "has_text_frame": true
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Title Only",
+      "category": "content",
+      "placeholder_count": 1,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 15,
+          "type_name": "Title",
+          "type_id": 1,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 29.0,
+            "width": 612.0,
+            "height": 65.0
+          },
+          "has_text_frame": true
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "name": "Blank",
+      "category": "blank",
+      "placeholder_count": 0,
+      "is_blank": true,
+      "placeholders": []
+    },
+    {
+      "index": 8,
+      "name": "Content with Caption",
+      "category": "content",
+      "placeholder_count": 3,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 16,
+          "type_name": "Title",
+          "type_id": 1,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 29.0,
+            "width": 612.0,
+            "height": 65.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 17,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 1,
+          "geometry": {
+            "left": 54.0,
+            "top": 110.0,
+            "width": 294.0,
+            "height": 350.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 18,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 2,
+          "geometry": {
+            "left": 372.0,
+            "top": 110.0,
+            "width": 294.0,
+            "height": 350.0
+          },
+          "has_text_frame": true
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "name": "Picture with Caption",
+      "category": "picture",
+      "placeholder_count": 3,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 19,
+          "type_name": "Title",
+          "type_id": 1,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 29.0,
+            "width": 612.0,
+            "height": 65.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 20,
+          "type_name": "Picture",
+          "type_id": 18,
+          "index": 1,
+          "geometry": {
+            "left": 54.0,
+            "top": 110.0,
+            "width": 456.0,
+            "height": 350.0
+          },
+          "has_text_frame": false
+        },
+        {
+          "id": 21,
+          "type_name": "Body",
+          "type_id": 2,
+          "index": 2,
+          "geometry": {
+            "left": 528.0,
+            "top": 110.0,
+            "width": 138.0,
+            "height": 350.0
+          },
+          "has_text_frame": true
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "name": "Title and Chart",
+      "category": "chart",
+      "placeholder_count": 2,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 22,
+          "type_name": "Title",
+          "type_id": 1,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 29.0,
+            "width": 612.0,
+            "height": 65.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 23,
+          "type_name": "Chart",
+          "type_id": 8,
+          "index": 1,
+          "geometry": {
+            "left": 54.0,
+            "top": 110.0,
+            "width": 612.0,
+            "height": 350.0
+          },
+          "has_text_frame": false
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "name": "Title and Table",
+      "category": "table",
+      "placeholder_count": 2,
+      "is_blank": false,
+      "placeholders": [
+        {
+          "id": 24,
+          "type_name": "Title",
+          "type_id": 1,
+          "index": 0,
+          "geometry": {
+            "left": 54.0,
+            "top": 29.0,
+            "width": 612.0,
+            "height": 65.0
+          },
+          "has_text_frame": true
+        },
+        {
+          "id": 25,
+          "type_name": "Table",
+          "type_id": 9,
+          "index": 1,
+          "geometry": {
+            "left": 54.0,
+            "top": 110.0,
+            "width": 612.0,
+            "height": 350.0
+          },
+          "has_text_frame": false
+        }
+      ]
+    }
+  ],
+  "statistics": {
+    "total_layouts": 11,
+    "layouts_with_placeholders": 10,
+    "average_placeholders_per_layout": 2.36
+  },
+  "validation_notes": []
+}

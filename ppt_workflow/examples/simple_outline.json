@@ -1,0 +1,30 @@
+{
+  "meta": {
+    "title": "Test Presentation",
+    "author": "Test User"
+  },
+  "slides": [
+    {
+      "layout": "Title Slide",
+      "placeholders": {
+        "CenterTitle": "Welcome to the Test",
+        "Subtitle": "A Simple Example"
+      }
+    },
+    {
+      "layout": "Title and Content",
+      "placeholders": {
+        "Title": "Agenda",
+        "Body": "• Introduction\n• Main Content\n• Conclusion"
+      }
+    },
+    {
+      "layout": "Two Content",
+      "placeholders": {
+        "Title": "Comparison",
+        "Body[0]": "Left Side:\n• Point 1\n• Point 2",
+        "Body[1]": "Right Side:\n• Point A\n• Point B"
+      }
+    }
+  ]
+}

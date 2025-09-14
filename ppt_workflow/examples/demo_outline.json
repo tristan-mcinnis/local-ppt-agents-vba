@@ -1,0 +1,105 @@
+{
+    "meta": {
+        "title": "Demo Deck",
+        "author": "Your Name",
+        "date": "2025-09-14",
+        "template": "ic-template-1.pptx",
+        "locale": "en-CN"
+    },
+    "slides": [
+        {
+            "layout": "Title Slide",
+            "placeholders": {
+                "CenterTitle": "Building a Modern Data Product",
+                "Subtitle": "From concept to launch in 6 weeks",
+                "SlideImage": "assets/logo.png"
+            }
+        },
+        {
+            "layout": "title-two-text",
+            "placeholders": {
+                "Title": "Agenda",
+                "Body[0]": "- Vision and goals\n- Users and use cases\n- Architecture overview\n- Prototype demo\n- Metrics & timeline",
+                "Body[1]": "- Risks & mitigations\n- Team & roles\n- Budget overview\n- Q&A"
+            }
+        },
+        {
+            "layout": "title-one-text-right-one-image-left",
+            "placeholders": {
+                "Title": "Vision",
+                "Body": "Deliver self-serve analytics to 3,000+ internal users with sub-2s query latency and governed data access.",
+                "Picture": "images/hero-dashboard.jpg"
+            }
+        },
+        {
+            "layout": "one-title-two-text-two-image-gap",
+            "placeholders": {
+                "Title": "Key Personas",
+                "Body[0]": "**Analyst**\n- Ad-hoc exploration\n- SQL power-user\n- Needs versioned datasets",
+                "Body[1]": "**Manager**\n- Weekly KPIs\n- Email/PDF exports\n- SLA: 9 am Monday",
+                "Picture[0]": "images/persona-analyst.png",
+                "Picture[1]": "images/persona-manager.png"
+            }
+        },
+        {
+            "layout": "Title, Text and Chart",
+            "placeholders": {
+                "Title": "North Star Metrics",
+                "Body": "- Weekly Active Users (WAU)\n- Median query latency (s)\n- Dashboard share rate (%)\n- Data freshness (hrs)",
+                "Chart": {
+                    "type": "line",
+                    "data": {
+                        "x": ["Week 1","Week 2","Week 3","Week 4","Week 5","Week 6"],
+                        "series": [
+                            {"name": "WAU", "data": [200, 380, 520, 780, 1100, 1400]},
+                            {"name": "Median Latency (s)", "data": [3.2, 2.8, 2.4, 2.1, 1.9, 1.7]}
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "layout": "title-text-left-image-right",
+            "placeholders": {
+                "Title": "High-Level Architecture",
+                "Body": "- Ingest: CDC + batch (Kafka, Airflow)\n- Lakehouse: Parquet + Delta\n- Query: DuckDB + Presto\n- Serving: REST + BI\n- AuthZ: OPA + Column-masking",
+                "Picture": "images/arch-overview.png"
+            }
+        },
+        {
+            "layout": "title-three-text",
+            "placeholders": {
+                "Title": "Data Contracts Snapshot",
+                "Body[0]": "**Orders v2**\n- PII tags: none\n- SLA: 15 min\n- Owner: Sales Eng",
+                "Body[1]": "**Customers v1**\n- PII tags: email\n- SLA: hourly\n- Owner: CRM",
+                "Body[2]": "**Events v3**\n- PII tags: anon_id\n- SLA: near-real-time\n- Owner: Platform"
+            }
+        },
+        {
+            "layout": "title-three-image-three-text",
+            "placeholders": {
+                "Title": "Prototype Screens",
+                "Picture[0]": "images/screen-explore.png",
+                "Picture[1]": "images/screen-dashboard.png",
+                "Picture[2]": "images/screen-share.png",
+                "Body[0]": "Explore\n- Column profiler\n- Query hints",
+                "Body[1]": "Dashboard\n- Filters\n- Cohorts",
+                "Body[2]": "Share\n- Links & embeds\n- Expiring tokens"
+            }
+        },
+        {
+            "layout": "Title and Text",
+            "placeholders": {
+                "Title": "Risks & Mitigations",
+                "Body": "- Data freshness SLAs might slip → Add backfill monitors and retry budgets\n- Governance gaps → Enforce policy-as-code and lineage checks in CI\n- Cost overruns → Right-size clusters, auto-suspend idle, tiered storage\n- Adoption lag → Champions program, office hours, template gallery"
+            }
+        },
+        {
+            "layout": "contact-slide-white",
+            "placeholders": {
+                "Title": "Thank You",
+                "Body": "Contact\n- Product: product@company.com\n- Slack: #data-product\n- Docs: https://docs.company.com/data-product"
+            }
+        }
+    ]
+}
