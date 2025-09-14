@@ -1,6 +1,8 @@
 # PowerPoint Automation System
 
-This project provides a deterministic Python pipeline that automatically generates PowerPoint VBA scripts from content outlines, with zero AI token usage after initial setup.
+A deterministic Python pipeline that automatically generates PowerPoint VBA scripts from content outlines, with zero AI token usage after initial setup.
+
+📁 **All code is in the `ppt_workflow/` directory**
 
 The system analyzes your PowerPoint template structure and combines it with your content outline to produce a ready-to-run VBA script that adds slides to your active presentation.
 
@@ -96,17 +98,19 @@ python workflow.py outline.json template_analysis.json
 
 ```
 local-ppt-agents-vba/
-├── ppt_workflow/                    # Python pipeline directory
-│   ├── core/
-│   │   ├── outline_to_plan.py      # Converts outline to structured plan
-│   │   └── plan_to_vba.py          # Generates VBA from plan
-│   ├── utils/
-│   │   └── validator.py            # Validation utilities
-│   ├── vba/
-│   │   └── universal_template_analyzer.vba  # Template analyzer
-│   ├── examples/                   # Example files
-│   │   ├── demo_outline.json       # Example outline
-│   │   └── simple_outline.json     # Simple example
-│   ├── output/                     # Generated files
-│   └── workflow.py                 # Main orchestrator
-└── data/                           # Template analysis files
+└── ppt_workflow/                    # Complete PowerPoint automation system
+    ├── core/
+    │   ├── outline_to_plan.py      # Converts outline to structured plan
+    │   └── plan_to_vba.py          # Generates VBA from plan
+    ├── utils/
+    │   └── validator.py            # Validation utilities
+    ├── vba/
+    │   └── universal_template_analyzer.vba  # Template analyzer VBA script
+    ├── examples/                   # Example files
+    │   ├── demo_outline.json       # Full demo outline
+    │   ├── simple_outline.json     # Simple example
+    │   └── template_analysis.json  # Example template analysis
+    ├── data/                       # Template analysis files
+    │   └── ic-template-1_analysis.json
+    ├── output/                     # Generated files (git-ignored)
+    └── workflow.py                 # Main orchestrator
