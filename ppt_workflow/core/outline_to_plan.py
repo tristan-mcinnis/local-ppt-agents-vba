@@ -253,7 +253,11 @@ class OutlineToPlanConverter:
 
             except ValueError as e:
                 self.errors.append(str(e))
-                raise
+                # Collect errors but continue processing remaining slides
+
+        if self.errors:
+            combined = "\n".join(self.errors)
+            raise ValueError(f"Conversion encountered errors:\n{combined}")
 
         # Build layout strategy with actual indices from ic-template-1
         layout_strategy = {
