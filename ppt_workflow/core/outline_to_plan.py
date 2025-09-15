@@ -300,7 +300,11 @@ class OutlineToPlanConverter:
 
             except ValueError as e:
                 self.errors.append(str(e))
-                raise
+                # Collect errors but continue processing remaining slides
+
+        if self.errors:
+            combined = "\n".join(self.errors)
+            raise ValueError(f"Conversion encountered errors:\n{combined}")
 
         # Build layout strategy by resolving layout names to indices
         layout_names = {
