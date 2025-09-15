@@ -29,6 +29,8 @@ cd local-ppt-agents-vba/ppt_workflow
 
 # Ensure Python 3.7+ is installed
 python --version
+# macOS users should use Homebrew python3
+python3 --version
 ```
 
 ## Quick Start
