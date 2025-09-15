@@ -259,6 +259,107 @@ Sub DebugListPlaceholders(s As Slide)
     Debug.Print "=== End of placeholder list ==="
 End Sub
 
+' ----- JSON Parsing Helpers -----
+' Extract value for a key from a flat JSON string
+Function JsonValue(json As String, key As String) As String
+    Dim pattern As String, startPos As Long, endPos As Long, ch As String, level As Long
+    pattern = """" & key & """"  ' "key"
+    startPos = InStr(json, pattern)
+    If startPos = 0 Then Exit Function
+    startPos = InStr(startPos + Len(pattern), json, ":")
+    If startPos = 0 Then Exit Function
+    startPos = startPos + 1
+    ch = Mid(json, startPos, 1)
+    Select Case ch
+        Case """"  ' string value
+            startPos = startPos + 1
+            endPos = InStr(startPos, json, """)
+            JsonValue = Mid(json, startPos, endPos - startPos)
+        Case "["  ' array value
+            endPos = startPos
+            level = 1
+            Do While level > 0 And endPos < Len(json)
+                endPos = endPos + 1
+                ch = Mid(json, endPos, 1)
+                If ch = "[" Then level = level + 1
+                If ch = "]" Then level = level - 1
+            Loop
+            JsonValue = Mid(json, startPos, endPos - startPos + 1)
+        Case "{"  ' object value
+            endPos = startPos
+            level = 1
+            Do While level > 0 And endPos < Len(json)
+                endPos = endPos + 1
+                ch = Mid(json, endPos, 1)
+                If ch = "{" Then level = level + 1
+                If ch = "}" Then level = level - 1
+            Loop
+            JsonValue = Mid(json, startPos, endPos - startPos + 1)
+        Case Else ' numeric or boolean
+            endPos = InStr(startPos, json, ",")
+            If endPos = 0 Then endPos = InStr(startPos, json, "}")
+            JsonValue = Trim(Mid(json, startPos, endPos - startPos))
+    End Select
+End Function
+
+' Parse a simple JSON array (numbers or strings) into a Variant array
+Function ParseJsonArray(arrText As String) As Variant
+    Dim cleaned As String, parts As Variant, i As Long
+    cleaned = Mid(arrText, 2, Len(arrText) - 2) ' remove [ ]
+    If Len(cleaned) = 0 Then
+        ParseJsonArray = Array()
+        Exit Function
+    End If
+    parts = Split(cleaned, ",")
+    For i = 0 To UBound(parts)
+        parts(i) = Trim(parts(i))
+        If Left(parts(i), 1) = """" And Right(parts(i), 1) = """" Then
+            parts(i) = Mid(parts(i), 2, Len(parts(i)) - 2)
+        ElseIf IsNumeric(parts(i)) Then
+            parts(i) = CDbl(parts(i))
+        End If
+    Next i
+    ParseJsonArray = parts
+End Function
+
+' Parse series array into parallel arrays of names and data
+Sub ParseSeries(seriesText As String, ByRef names() As String, ByRef data() As Variant)
+    Dim inner As String, items As Variant, i As Long
+    inner = Mid(seriesText, 2, Len(seriesText) - 2) ' remove [ ]
+    If Len(inner) = 0 Then Exit Sub
+    items = Split(inner, "},{")
+    ReDim names(0 To UBound(items))
+    ReDim data(0 To UBound(items))
+    For i = 0 To UBound(items)
+        Dim item As String
+        item = items(i)
+        If Left(item, 1) <> "{" Then item = "{" & item
+        If Right(item, 1) <> "}" Then item = item & "}"
+        names(i) = JsonValue(item, "name")
+        data(i) = ParseJsonArray(JsonValue(item, "data"))
+    Next i
+End Sub
+
+' Parse table rows (array of arrays)
+Function ParseRowArray(rowsText As String) As Variant
+    Dim inner As String, rowParts As Variant, i As Long, res() As Variant
+    inner = Mid(rowsText, 2, Len(rowsText) - 2) ' remove outer [ ]
+    If Len(inner) = 0 Then
+        ParseRowArray = Array()
+        Exit Function
+    End If
+    rowParts = Split(inner, "],[")
+    ReDim res(0 To UBound(rowParts))
+    For i = 0 To UBound(rowParts)
+        Dim rowStr As String
+        rowStr = rowParts(i)
+        If Left(rowStr, 1) <> "[" Then rowStr = "[" & rowStr
+        If Right(rowStr, 1) <> "]" Then rowStr = rowStr & "]"
+        res(i) = ParseJsonArray(rowStr)
+    Next i
+    ParseRowArray = res
+End Function
+
 ' Create chart at placeholder location (macOS-safe)
 Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As String)
     On Error Resume Next
@@ -266,6 +367,7 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
     Dim chartObj As Object
     Dim l As Single, t As Single, w As Single, h As Single
     Dim chartType As Long
+    Dim chartTypeStr As String
 
     ' Get placeholder dimensions
     l = placeholder.Left
@@ -276,93 +378,55 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
     ' Delete placeholder
     placeholder.Delete
 
-    ' Determine chart type from spec (default to column)
-    chartType = xlColumnClustered
-    If InStr(chartSpec, """line""") > 0 Then chartType = xlLine
-    If InStr(chartSpec, """bar""") > 0 Then chartType = xlBarClustered
-    If InStr(chartSpec, """pie""") > 0 Then chartType = xlPie
-    If InStr(chartSpec, """area""") > 0 Then chartType = xlArea
-    If InStr(chartSpec, """scatter""") > 0 Then chartType = xlXYScatter
+    ' Determine chart type from spec
+    chartTypeStr = LCase(JsonValue(chartSpec, "type"))
+    Select Case chartTypeStr
+        Case "line": chartType = xlLine
+        Case "bar": chartType = xlBarClustered
+        Case "pie": chartType = xlPie
+        Case "area": chartType = xlArea
+        Case "scatter": chartType = xlXYScatter
+        Case Else: chartType = xlColumnClustered
+    End Select
 
-    ' Create chart using AddChart (macOS compatible)
+    ' Create chart
     Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
-
     If chartShape Is Nothing Then
         MsgBox "Failed to create chart", vbCritical
         Exit Sub
     End If
-
-    ' Access chart object
     Set chartObj = chartShape.Chart
 
-    ' Populate chart based on the spec
-    ' For extensibility, look for specific data patterns
-    If InStr(chartSpec, "WAU") > 0 Or InStr(chartSpec, "Week 1") > 0 Then
-        ' North Star Metrics or any weekly data chart
-        PopulateWeeklyMetricsChart chartObj, chartSpec
-    ElseIf InStr(chartSpec, "series") > 0 Then
-        ' Generic multi-series chart
-        PopulateGenericChart chartObj, chartSpec
-    Else
-        ' Fallback sample data
-        With chartObj.ChartData
-            .Activate
-            .Workbook.Worksheets(1).Range("A1").Value = "Category"
-            .Workbook.Worksheets(1).Range("B1").Value = "Value"
-            .Workbook.Worksheets(1).Range("A2").Value = "Item 1"
-            .Workbook.Worksheets(1).Range("B2").Value = 10
-            .Workbook.Close
-        End With
-    End If
+    Dim xVals As Variant
+    Dim seriesNames() As String
+    Dim seriesData() As Variant
+    xVals = ParseJsonArray(JsonValue(chartSpec, "x"))
+    ParseSeries JsonValue(chartSpec, "series"), seriesNames, seriesData
 
-    On Error GoTo 0
-End Sub
-
-' Populate weekly metrics chart with actual data
-Sub PopulateWeeklyMetricsChart(chartObj As Object, chartSpec As String)
     With chartObj.ChartData
         .Activate
         Dim ws As Object
         Set ws = .Workbook.Worksheets(1)
-
-        ' Clear existing data
         ws.Cells.Clear
 
-        ' Set up headers
-        ws.Range("A1").Value = "Week"
-        ws.Range("B1").Value = "WAU"
-        ws.Range("C1").Value = "Median Latency (s)"
+        Dim i As Long, j As Long
+        ws.Cells(1, 1).Value = "Category"
+        For i = 0 To UBound(seriesNames)
+            ws.Cells(1, i + 2).Value = seriesNames(i)
+        Next i
 
-        ' Add x-axis labels
-        ws.Range("A2:A7").Value = Application.Transpose(Array("Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6"))
+        For j = 0 To UBound(xVals)
+            ws.Cells(j + 2, 1).Value = xVals(j)
+            For i = 0 To UBound(seriesNames)
+                ws.Cells(j + 2, i + 2).Value = seriesData(i)(j)
+            Next i
+        Next j
 
-        ' Add WAU data
-        ws.Range("B2:B7").Value = Application.Transpose(Array(200, 380, 520, 780, 1100, 1400))
-
-        ' Add Latency data
-        ws.Range("C2:C7").Value = Application.Transpose(Array(3.2, 2.8, 2.4, 2.1, 1.9, 1.7))
-
-        ' Set the data range
-        chartObj.SetSourceData Source:=ws.Range("A1:C7")
-
+        chartObj.SetSourceData Source:=ws.Range(ws.Cells(1, 1), ws.Cells(UBound(xVals) + 2, UBound(seriesNames) + 2))
         .Workbook.Close
     End With
 
-    ' Set chart title
-    chartObj.HasTitle = True
-    chartObj.ChartTitle.Text = "Metrics Trend"
-End Sub
-
-' Populate generic chart
-Sub PopulateGenericChart(chartObj As Object, chartSpec As String)
-    With chartObj.ChartData
-        .Activate
-        .Workbook.Worksheets(1).Range("A1").Value = "Category"
-        .Workbook.Worksheets(1).Range("B1").Value = "Series 1"
-        .Workbook.Worksheets(1).Range("A2:A4").Value = Application.Transpose(Array("Q1", "Q2", "Q3"))
-        .Workbook.Worksheets(1).Range("B2:B4").Value = Application.Transpose(Array(25, 35, 45))
-        .Workbook.Close
-    End With
+    On Error GoTo 0
 End Sub
 
 ' Create table at placeholder location
@@ -371,7 +435,7 @@ Sub CreateTableAtPlaceholder(sld As Slide, placeholder As Shape, tableSpec As St
     Dim tblShape As Shape
     Dim tbl As Table
     Dim l As Single, t As Single, w As Single, h As Single
-    Dim rows As Long, cols As Long
+    Dim headers As Variant, rows As Variant
     Dim r As Long, c As Long
 
     ' Get placeholder dimensions
@@ -383,17 +447,25 @@ Sub CreateTableAtPlaceholder(sld As Slide, placeholder As Shape, tableSpec As St
     ' Delete placeholder
     placeholder.Delete
 
-    ' Parse table spec (simplified - in production, parse JSON)
-    rows = 3
-    cols = 2
+    ' Parse table spec
+    headers = ParseJsonArray(JsonValue(tableSpec, "headers"))
+    rows = ParseRowArray(JsonValue(tableSpec, "rows"))
 
-    ' Create table
-    Set tblShape = sld.Shapes.AddTable(rows, cols, l, t, w, h)
+    ' Create table with header row
+    Set tblShape = sld.Shapes.AddTable(UBound(rows) + 2, UBound(headers) + 1, l, t, w, h)
     Set tbl = tblShape.Table
 
-    ' Add sample data
-    tbl.Cell(1, 1).Shape.TextFrame.TextRange.text = "Header 1"
-    tbl.Cell(1, 2).Shape.TextFrame.TextRange.text = "Header 2"
+    ' Populate headers
+    For c = 0 To UBound(headers)
+        tbl.Cell(1, c + 1).Shape.TextFrame.TextRange.text = headers(c)
+    Next c
+
+    ' Populate rows
+    For r = 0 To UBound(rows)
+        For c = 0 To UBound(headers)
+            tbl.Cell(r + 2, c + 1).Shape.TextFrame.TextRange.text = rows(r)(c)
+        Next c
+    Next r
 
     On Error GoTo 0
 End Sub
