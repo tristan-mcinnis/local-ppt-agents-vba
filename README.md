@@ -94,6 +94,39 @@ python workflow.py outline.json template_analysis.json
 5.  Run the `Main()` subroutine (**F5**)
 6.  Your slides will be added to the active presentation
 
+## macOS Setup and Tips
+
+- Use Homebrew `python3` (`brew install python`) and run the workflow with `python3`.
+- Install dependencies with `pip3 install -r requirements-macos.txt`.
+- Open the VBA editor with **Opt+F11** instead of Alt+F11.
+- If macros are disabled, enable them via **PowerPoint → Preferences → Security & Privacy → Macro Security**.
+- You can run macros from the terminal:
+
+```bash
+osascript -e 'tell application "Microsoft PowerPoint" to run macro "Main"'
+```
+
+- For fully automated execution on macOS, use the provided AppleScript:
+
+```bash
+osascript scripts/run_vba.applescript MyTemplate.pptx ppt_workflow/output/generated_script.vba
+```
+This opens your template, loads the generated VBA, and runs the `Main` macro.
+
+- Paths on macOS can be case-sensitive; ensure your `outline.json` and `template_analysis.json` names match exactly.
+- Run `scripts/mac_env_check.py` to verify your Python environment.
+
+### macOS Compatibility
+
+The workflow has been tested with:
+
+| macOS Version | PowerPoint Version |
+|---------------|-------------------|
+| macOS 13+     | PowerPoint 16.77+ |
+| macOS 14+     | PowerPoint 16.80+ |
+
+Other versions may work but are not officially tested.
+
 ## Project Structure
 
 ```

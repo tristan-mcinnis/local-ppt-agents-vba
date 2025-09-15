@@ -1,0 +1,3 @@
+# macOS requirements for PowerPoint automation workflow
+# Tested with Homebrew Python 3.11
+# No external packages are required for core functionality

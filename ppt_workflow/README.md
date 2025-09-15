@@ -29,6 +29,8 @@ cd local-ppt-agents-vba/ppt_workflow
 
 # Ensure Python 3.7+ is installed
 python --version
+# macOS users should use Homebrew python3
+python3 --version
 ```
 
 ## Quick Start
@@ -86,6 +88,12 @@ python workflow.py outline.json template_analysis.json --skip-validation --quiet
 4. Paste contents of `output/generated_script.vba`
 5. Run `ValidateTemplate` to check compatibility
 6. Run `Main` to create your slides
+
+On macOS you can automate these steps with:
+
+```bash
+osascript ../scripts/run_vba.applescript MyTemplate.pptx output/generated_script.vba
+```
 
 ## Detailed Usage
 

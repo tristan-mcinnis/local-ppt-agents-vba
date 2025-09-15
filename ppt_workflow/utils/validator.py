@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
 
+from ppt_workflow.utils.path_utils import normalize_path
+
 
 class WorkflowValidator:
     """Validates artifacts at each stage of the workflow"""
@@ -27,10 +29,13 @@ class WorkflowValidator:
         self.clear()
 
         try:
-            with open(outline_path, 'r', encoding='utf-8') as f:
+            norm = normalize_path(outline_path)
+            with open(norm, 'r', encoding='utf-8', newline='') as f:
                 outline = json.load(f)
         except Exception as e:
-            self.errors.append(f"Failed to load outline: {e}")
+            self.errors.append(
+                f"Failed to load outline: {e}. On macOS, verify the path and permissions."
+            )
             return False, self._get_report()
 
         # Check required fields
@@ -112,10 +117,13 @@ class WorkflowValidator:
         self.clear()
 
         try:
-            with open(analysis_path, 'r', encoding='utf-8') as f:
+            norm = normalize_path(analysis_path)
+            with open(norm, 'r', encoding='utf-8', newline='') as f:
                 analysis = json.load(f)
         except Exception as e:
-            self.errors.append(f"Failed to load analysis: {e}")
+            self.errors.append(
+                f"Failed to load analysis: {e}. On macOS, verify the path and permissions."
+            )
             return False, self._get_report()
 
         # Check required top-level fields
@@ -165,10 +173,13 @@ class WorkflowValidator:
         self.clear()
 
         try:
-            with open(plan_path, 'r', encoding='utf-8') as f:
+            norm = normalize_path(plan_path)
+            with open(norm, 'r', encoding='utf-8', newline='') as f:
                 plan = json.load(f)
         except Exception as e:
-            self.errors.append(f"Failed to load plan: {e}")
+            self.errors.append(
+                f"Failed to load plan: {e}. On macOS, verify the path and permissions."
+            )
             return False, self._get_report()
 
         # Check required fields

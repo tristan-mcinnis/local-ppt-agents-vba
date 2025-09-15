@@ -15,6 +15,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from core.outline_to_plan import OutlineToPlanConverter
 from core.plan_to_vba import PlanToVBAConverter
+from utils.path_utils import normalize_path
+from utils.preflight import run_mac_checks, PreflightError
 
 
 class WorkflowOrchestrator:
@@ -23,6 +25,10 @@ class WorkflowOrchestrator:
     def __init__(self, verbose: bool = True):
         """Initialize orchestrator"""
         self.verbose = verbose
+        try:
+            run_mac_checks()
+        except PreflightError as e:
+            raise SystemExit(f"Preflight check failed: {e}")
         self.workflow_dir = Path(__file__).parent
         self.output_dir = self.workflow_dir / "output"
         self.output_dir.mkdir(exist_ok=True)
@@ -41,7 +47,9 @@ class WorkflowOrchestrator:
 
     def validate_files(self, outline_path: Path, analysis_path: Path) -> bool:
         """Validate input files exist and are valid JSON"""
-        # Check existence
+        outline_path = normalize_path(outline_path)
+        analysis_path = normalize_path(analysis_path)
+
         if not outline_path.exists():
             self.log(f"Outline file not found: {outline_path}", "ERROR")
             return False
@@ -50,15 +58,14 @@ class WorkflowOrchestrator:
             self.log(f"Analysis file not found: {analysis_path}", "ERROR")
             return False
 
-        # Check JSON validity
         try:
-            with open(outline_path, 'r') as f:
+            with open(outline_path, 'r', encoding='utf-8', newline='') as f:
                 outline = json.load(f)
                 if "slides" not in outline:
                     self.log("Outline missing 'slides' field", "ERROR")
                     return False
 
-            with open(analysis_path, 'r') as f:
+            with open(analysis_path, 'r', encoding='utf-8', newline='') as f:
                 analysis = json.load(f)
                 if "layouts" not in analysis:
                     self.log("Analysis missing 'layouts' field", "ERROR")
@@ -84,7 +91,7 @@ class WorkflowOrchestrator:
 
             # Save plan
             plan_path = self.output_dir / "slide_plan.json"
-            with open(plan_path, 'w', encoding='utf-8') as f:
+            with open(plan_path, 'w', encoding='utf-8', newline='\n') as f:
                 json.dump(plan, f, indent=2, ensure_ascii=False)
 
             # Report results
@@ -107,7 +114,10 @@ class WorkflowOrchestrator:
             return plan_path
 
         except Exception as e:
-            self.log(f"Failed to generate plan: {e}", "ERROR")
+            self.log(
+                f"Failed to generate plan: {e}. On macOS, verify file paths and sandbox permissions.",
+                "ERROR",
+            )
             return None
 
     def run_step2_plan_to_vba(self, plan_path: Path) -> Optional[Path]:
@@ -123,7 +133,7 @@ class WorkflowOrchestrator:
 
             # Save VBA script
             vba_path = self.output_dir / "generated_script.vba"
-            with open(vba_path, 'w', encoding='utf-8') as f:
+            with open(vba_path, 'w', encoding='utf-8', newline='\n') as f:
                 f.write(vba_code)
 
             # Report results
@@ -136,7 +146,10 @@ class WorkflowOrchestrator:
             return vba_path
 
         except Exception as e:
-            self.log(f"Failed to generate VBA: {e}", "ERROR")
+            self.log(
+                f"Failed to generate VBA: {e}. On macOS, ensure PowerPoint is installed and paths are writable.",
+                "ERROR",
+            )
             return None
 
     def run_validation(self, plan_path: Path, vba_path: Path) -> bool:
@@ -145,10 +158,10 @@ class WorkflowOrchestrator:
 
         try:
             # Load files
-            with open(plan_path, 'r') as f:
+            with open(plan_path, 'r', encoding='utf-8', newline='') as f:
                 plan = json.load(f)
 
-            with open(vba_path, 'r') as f:
+            with open(vba_path, 'r', encoding='utf-8', newline='') as f:
                 vba_content = f.read()
 
             # Basic validations

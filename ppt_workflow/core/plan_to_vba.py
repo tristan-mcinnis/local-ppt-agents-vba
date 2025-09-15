@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from ppt_workflow.utils.path_utils import normalize_path
+
 
 class PlanToVBAConverter:
     """Converts slide plan to executable VBA script"""
@@ -28,9 +30,16 @@ class PlanToVBAConverter:
 
     @staticmethod
     def _load_json(path: str) -> Dict:
-        """Load and parse JSON file"""
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        """Load and parse JSON file with macOS-friendly error reporting"""
+        norm_path = normalize_path(path)
+        try:
+            with open(norm_path, 'r', encoding='utf-8', newline='') as f:
+                return json.load(f)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                f"File not found: {norm_path}. On macOS, verify the path "
+                "spelling and file permissions."
+            ) from e
 
     @staticmethod
     def _vba_escape(s: str) -> str:
@@ -397,8 +406,12 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
         Case Else: chartType = xlColumnClustered
     End Select
 
-    ' Create chart
-    Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
+    ' Create chart with platform fallback
+    #If Mac Then
+        Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
+    #Else
+        Set chartShape = sld.Shapes.AddChart2(201, chartType, l, t, w, h)
+    #End If
     If chartShape Is Nothing Then
         MsgBox "Failed to create chart", vbCritical
         Exit Sub
