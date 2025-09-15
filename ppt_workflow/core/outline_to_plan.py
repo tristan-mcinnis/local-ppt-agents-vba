@@ -77,15 +77,26 @@ class OutlineToPlanConverter:
 
         return index
 
-    def _parse_placeholder_key(self, key: str) -> Tuple[str, int]:
+    def _parse_placeholder_key(self, key: str, slide_no: int) -> Tuple[str, int]:
         """
-        Parse placeholder key to extract type and ordinal
+        Parse placeholder key to extract type and ordinal.
         Examples: "Body" -> ("body", 0), "Body[1]" -> ("body", 1)
+
+        On invalid ordinal, logs an error with slide number and
+        returns a safe default ordinal of 0.
         """
         key = key.strip()
         if "[" in key and key.endswith("]"):
             base = key[:key.index("[")]
-            ordinal = int(key[key.index("[")+1:-1])
+            ordinal_str = key[key.index("[")+1:-1]
+            try:
+                ordinal = int(ordinal_str)
+            except ValueError:
+                normalized = self._normalize_name(base)
+                self.errors.append(
+                    f"Slide {slide_no}: Placeholder '{key}' has invalid ordinal '{ordinal_str}'. Defaulting to 0."
+                )
+                return normalized, 0
             return self._normalize_name(base), ordinal
         return self._normalize_name(key), 0
 
@@ -137,7 +148,7 @@ class OutlineToPlanConverter:
         """Extract title from slide placeholders or use fallback"""
         # Look for explicit Title placeholder
         for key, value in placeholders.items():
-            base, _ = self._parse_placeholder_key(key)
+            base, _ = self._parse_placeholder_key(key, slide_no)
             if base == "title" and isinstance(value, str) and value.strip():
                 return value
 
@@ -167,7 +178,7 @@ class OutlineToPlanConverter:
 
         # Process each placeholder in the slide
         for key, value in slide.get("placeholders", {}).items():
-            base, ordinal = self._parse_placeholder_key(key)
+            base, ordinal = self._parse_placeholder_key(key, slide_no)
 
             # Get type ID and canonical name
             if base not in self.TYPE_MAP:
