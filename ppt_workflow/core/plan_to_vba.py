@@ -6,17 +6,25 @@ Generates macOS-safe VBA code with complete helper functions
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List, Optional
 
 
 class PlanToVBAConverter:
     """Converts slide plan to executable VBA script"""
 
-    def __init__(self, plan_path: str):
-        """Initialize with path to slide plan"""
+    def __init__(self, plan_path: str, debug_slide: Optional[int] = None):
+        """Initialize with path to slide plan
+
+        Args:
+            plan_path: Path to the slide plan JSON file.
+            debug_slide: Optional slide number to output placeholder
+                diagnostics for. By default, no debugging information is
+                generated.
+        """
         self.plan = self._load_json(plan_path)
         self.code_lines = []
         self.used_layouts = set()
+        self.debug_slide = debug_slide
 
     @staticmethod
     def _load_json(path: str) -> Dict:
@@ -412,11 +420,13 @@ End Sub
         code.append(f"    ' ---- Slide {slide_num}: {slide.get('slide_title', '')} ----")
         code.append(f"    Set currentSlide = AddSlideWithLayout(CacheGet({layout_idx}))")
 
-        # Add debug output for slide 4 to diagnose placeholder issues
-        if slide_num == 4:
-            code.append(f"    ")
-            code.append(f"    ' Debug: List placeholders on slide 4 (layout {layout_idx})")
-            code.append(f"    DebugListPlaceholders currentSlide")
+        # Optional debug output for diagnosing placeholder issues
+        if self.debug_slide is not None and slide_num == self.debug_slide:
+            code.append("    ")
+            code.append(
+                f"    ' Debug: List placeholders on slide {slide_num} (layout {layout_idx})"
+            )
+            code.append("    DebugListPlaceholders currentSlide")
 
         code.append("")
 
