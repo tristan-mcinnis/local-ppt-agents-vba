@@ -160,6 +160,42 @@ class OutlineToPlanConverter:
 
         return f"Slide {slide_no}"
 
+    def _find_layout_index(self, layout_name: str,
+                           fallback_category: Optional[str] = None) -> int:
+        """Lookup layout index by name with optional category fallback.
+
+        Args:
+            layout_name: The expected layout name to search for.
+            fallback_category: Optional layout category to use if the name
+                is not found. The first layout matching this category will be
+                returned.
+
+        Returns:
+            The index of the matched layout.
+
+        Raises:
+            ValueError: If neither the layout name nor the fallback category
+                can be found in the template analysis.
+        """
+        normalized = self._normalize_name(layout_name)
+        if normalized in self.layout_index:
+            return self.layout_index[normalized]["index"]
+
+        if fallback_category:
+            fallback_norm = self._normalize_name(fallback_category)
+            for layout in self.analysis.get("layouts", []):
+                if self._normalize_name(layout.get("category", "")) == fallback_norm:
+                    self.warnings.append(
+                        f"Layout '{layout_name}' not found. Using '{layout['name']}' "
+                        f"(index {layout['index']}) as fallback."
+                    )
+                    return layout["index"]
+
+        raise ValueError(
+            f"Required layout '{layout_name}' not found and no fallback "
+            f"available."
+        )
+
     def _process_slide(self, slide: Dict, slide_no: int) -> Dict:
         """Process a single slide from outline to plan format"""
         layout_name = slide.get("layout", "")
@@ -266,15 +302,19 @@ class OutlineToPlanConverter:
                 self.errors.append(str(e))
                 raise
 
-        # Build layout strategy with actual indices from ic-template-1
-        layout_strategy = {
-            "title_slide_index": 58,       # Title Slide
-            "two_column_index": 6,         # title-two-text
-            "three_column_index": 8,       # title-three-text
-            "chart_layout_index": 59,      # Title, Text and Chart
-            "standard_content_index": 56,  # Title and Text
-            "contact_index": 54            # contact-slide-white
+        # Build layout strategy by resolving layout names to indices
+        layout_names = {
+            "title_slide_index": ("Title Slide", "title"),
+            "two_column_index": ("title-two-text", "content"),
+            "three_column_index": ("title-three-text", "content"),
+            "chart_layout_index": ("Title, Text and Chart", "content"),
+            "standard_content_index": ("Title and Text", "content"),
+            "contact_index": ("contact-slide-white", "content"),
         }
+
+        layout_strategy = {}
+        for key, (name, category) in layout_names.items():
+            layout_strategy[key] = self._find_layout_index(name, category)
 
         # Build complete plan
         plan = {
