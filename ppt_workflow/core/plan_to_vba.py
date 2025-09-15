@@ -4,7 +4,7 @@ Generates macOS-safe VBA code with complete helper functions
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -45,7 +45,7 @@ class PlanToVBAConverter:
 
     def _generate_header(self) -> str:
         """Generate VBA file header with constants and declarations"""
-        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         template_name = self.plan["meta"]["template_name"]
 
         return f"""' ================================================================
@@ -102,6 +102,7 @@ Const xlXYScatter As Long = -4169
 
 ' Module-level cache for layouts (macOS-safe Collection instead of Scripting.Dictionary)
 Dim layoutCache As Collection
+Dim errorLog As Collection
 
 ' Check if layout cache has a key (macOS-safe)
 Private Function CacheHas(key As Long) As Boolean
@@ -267,105 +268,329 @@ Sub DebugListPlaceholders(s As Slide)
     Debug.Print "=== End of placeholder list ==="
 End Sub
 
-' ----- JSON Parsing Helpers -----
-' Extract value for a key from a flat JSON string
-Function JsonValue(json As String, key As String) As String
-    Dim pattern As String, startPos As Long, endPos As Long, ch As String, level As Long
-    pattern = """" & key & """"  ' "key"
-    startPos = InStr(json, pattern)
-    If startPos = 0 Then Exit Function
-    startPos = InStr(startPos + Len(pattern), json, ":")
-    If startPos = 0 Then Exit Function
-    startPos = startPos + 1
-    ch = Mid(json, startPos, 1)
+' ----- Error Logging Helpers -----
+Sub InitErrorLog()
+    Set errorLog = New Collection
+End Sub
+
+Sub LogError(code As String, details As String)
+    On Error Resume Next
+    If errorLog Is Nothing Then Set errorLog = New Collection
+    errorLog.Add code & ": " & details
+    On Error GoTo 0
+End Sub
+
+Function ErrorsCount() As Long
+    If errorLog Is Nothing Then
+        ErrorsCount = 0
+    Else
+        ErrorsCount = errorLog.Count
+    End If
+End Function
+
+Sub ShowErrors()
+    If errorLog Is Nothing Or errorLog.Count = 0 Then Exit Sub
+    Dim i As Long
+    Dim msg As String
+    msg = "Encountered " & errorLog.Count & " issue(s):" & vbCrLf & vbCrLf
+    For i = 1 To errorLog.Count
+        msg = msg & "- " & errorLog(i) & vbCrLf
+        If i >= 12 Then
+            msg = msg & "... (more omitted)" & vbCrLf
+            Exit For
+        End If
+    Next i
+    MsgBox msg, vbExclamation, "PowerPoint Script Issues"
+End Sub
+
+' ----- JSON Parsing Helpers (robust) -----
+Private Sub Json_SkipWs(ByVal s As String, ByRef pos As Long)
+    Dim ch As String
+    Do While pos <= Len(s)
+        ch = Mid$(s, pos, 1)
+        If ch <> " " And ch <> vbTab And ch <> vbCr And ch <> vbLf Then Exit Do
+        pos = pos + 1
+    Loop
+End Sub
+
+Private Function Json_ParseString(ByVal s As String, ByRef pos As Long) As String
+    Dim res As String, ch As String, esc As Boolean
+    Dim code As String, uVal As Integer
+    ' Assumes current pos points at opening quote
+    pos = pos + 1
+    Do While pos <= Len(s)
+        ch = Mid$(s, pos, 1)
+        pos = pos + 1
+        If esc Then
+            Select Case ch
+                Case "\"": res = res & "\"
+                Case "\": res = res & "\"
+                Case "/": res = res & "/"
+                Case "b": res = res & Chr$(8)
+                Case "f": res = res & Chr$(12)
+                Case "n": res = res & vbLf
+                Case "r": res = res & vbCr
+                Case "t": res = res & vbTab
+                Case "u"
+                    If pos + 3 <= Len(s) Then
+                        code = Mid$(s, pos, 4)
+                        On Error Resume Next
+                        uVal = CInt("&H" & code)
+                        If Err.Number = 0 Then
+                            res = res & ChrW$(uVal)
+                        Else
+                            res = res & "?"
+                            Err.Clear
+                        End If
+                        On Error GoTo 0
+                        pos = pos + 4
+                    End If
+                Case Else
+                    res = res & ch
+            End Select
+            esc = False
+        ElseIf ch = "\" Then
+            esc = True
+        ElseIf ch = """" Then
+            Exit Do
+        Else
+            res = res & ch
+        End If
+    Loop
+    Json_ParseString = res
+End Function
+
+Private Function Json_FindMatching(ByVal s As String, ByVal startPos As Long, _
+                                   ByVal openCh As String, ByVal closeCh As String) As Long
+    Dim i As Long, depth As Long, ch As String, esc As Boolean, inStr As Boolean
+    depth = 0
+    For i = startPos To Len(s)
+        ch = Mid$(s, i, 1)
+        If inStr Then
+            If esc Then
+                esc = False
+            ElseIf ch = "\" Then
+                esc = True
+            ElseIf ch = """" Then
+                inStr = False
+            End If
+        Else
+            If ch = """" Then
+                inStr = True
+            ElseIf ch = openCh Then
+                depth = depth + 1
+            ElseIf ch = closeCh Then
+                depth = depth - 1
+                If depth = 0 Then
+                    Json_FindMatching = i
+                    Exit Function
+                End If
+            End If
+        End If
+    Next i
+    Json_FindMatching = 0
+End Function
+
+Private Function Json_FindKeyAtTopLevel(ByVal s As String, ByVal key As String) As Long
+    ' Returns position of first character of value for key at top-level of object
+    Dim i As Long, ch As String, esc As Boolean, inStr As Boolean, depth As Long
+    Dim k As String, valPos As Long
+    depth = 0
+    i = 1
+    Do While i <= Len(s)
+        ch = Mid$(s, i, 1)
+        If inStr Then
+            If esc Then
+                esc = False
+            ElseIf ch = "\" Then
+                esc = True
+            ElseIf ch = """" Then
+                inStr = False
+            End If
+            i = i + 1
+        Else
+            Select Case ch
+                Case """"  ' start string (potential key)
+                    If depth = 1 Then
+                        Dim savePos As Long
+                        savePos = i
+                        k = Json_ParseString(s, i)
+                        Json_SkipWs s, i
+                        If i <= Len(s) And Mid$(s, i, 1) = ":" Then
+                            i = i + 1
+                            Json_SkipWs s, i
+                            If k = key Then
+                                Json_FindKeyAtTopLevel = i
+                                Exit Function
+                            Else
+                                ' skip the value to continue scanning
+                                Dim c As String
+                                c = Mid$(s, i, 1)
+                                If c = """" Then
+                                    Call Json_ParseString(s, i)
+                                ElseIf c = "{" Then
+                                    i = Json_FindMatching(s, i, "{", "}") + 1
+                                ElseIf c = "[" Then
+                                    i = Json_FindMatching(s, i, "[", "]") + 1
+                                Else
+                                    ' literal
+                                    Do While i <= Len(s)
+                                        c = Mid$(s, i, 1)
+                                        If c = "," Or c = "}" Then Exit Do
+                                        i = i + 1
+                                    Loop
+                                End If
+                            End If
+                        End If
+                    Else
+                        ' skip string not at key position
+                        Call Json_ParseString(s, i)
+                    End If
+                Case "{": depth = depth + 1: i = i + 1
+                Case "}": depth = depth - 1: i = i + 1
+                Case "[": depth = depth + 1: i = i + 1
+                Case "]": depth = depth - 1: i = i + 1
+                Case Else: i = i + 1
+            End Select
+        End If
+    Loop
+    Json_FindKeyAtTopLevel = 0
+End Function
+
+Function JsonValue(ByVal json As String, ByVal key As String) As String
+    Dim pos As Long, ch As String, endPos As Long
+    If Len(json) = 0 Then Exit Function
+    ' If this is an object, ensure we start scanning with depth awareness
+    pos = Json_FindKeyAtTopLevel(json, key)
+    If pos = 0 Then Exit Function
+    ch = Mid$(json, pos, 1)
     Select Case ch
-        Case """"  ' string value
-            startPos = startPos + 1
-            endPos = InStr(startPos, json, """)
-            JsonValue = Mid(json, startPos, endPos - startPos)
-        Case "["  ' array value
-            endPos = startPos
-            level = 1
-            Do While level > 0 And endPos < Len(json)
+        Case """"  ' string
+            JsonValue = Json_ParseString(json, pos)
+        Case "["  ' array
+            endPos = Json_FindMatching(json, pos, "[", "]")
+            If endPos > 0 Then JsonValue = Mid$(json, pos, endPos - pos + 1)
+        Case "{"  ' object
+            endPos = Json_FindMatching(json, pos, "{", "}")
+            If endPos > 0 Then JsonValue = Mid$(json, pos, endPos - pos + 1)
+        Case Else ' literal: number, true, false, null
+            endPos = pos
+            Do While endPos <= Len(json)
+                ch = Mid$(json, endPos, 1)
+                If ch = "," Or ch = "}" Or ch = "]" Or ch = vbCr Or ch = vbLf Then Exit Do
                 endPos = endPos + 1
-                ch = Mid(json, endPos, 1)
-                If ch = "[" Then level = level + 1
-                If ch = "]" Then level = level - 1
             Loop
-            JsonValue = Mid(json, startPos, endPos - startPos + 1)
-        Case "{"  ' object value
-            endPos = startPos
-            level = 1
-            Do While level > 0 And endPos < Len(json)
-                endPos = endPos + 1
-                ch = Mid(json, endPos, 1)
-                If ch = "{" Then level = level + 1
-                If ch = "}" Then level = level - 1
-            Loop
-            JsonValue = Mid(json, startPos, endPos - startPos + 1)
-        Case Else ' numeric or boolean
-            endPos = InStr(startPos, json, ",")
-            If endPos = 0 Then endPos = InStr(startPos, json, "}")
-            JsonValue = Trim(Mid(json, startPos, endPos - startPos))
+            JsonValue = Trim$(Mid$(json, pos, endPos - pos))
     End Select
 End Function
 
-' Parse a simple JSON array (numbers or strings) into a Variant array
-Function ParseJsonArray(arrText As String) As Variant
-    Dim cleaned As String, parts As Variant, i As Long
-    cleaned = Mid(arrText, 2, Len(arrText) - 2) ' remove [ ]
-    If Len(cleaned) = 0 Then
+Private Function Json_SplitTopLevelArray(ByVal arrText As String) As Variant
+    Dim res() As String
+    Dim n As Long, i As Long, ch As String, depth As Long
+    Dim inStr As Boolean, esc As Boolean, startEl As Long
+    If Len(arrText) < 2 Then
+        Json_SplitTopLevelArray = Array()
+        Exit Function
+    End If
+    startEl = 2 ' after [
+    For i = 2 To Len(arrText) - 1
+        ch = Mid$(arrText, i, 1)
+        If inStr Then
+            If esc Then
+                esc = False
+            ElseIf ch = "\" Then
+                esc = True
+            ElseIf ch = """" Then
+                inStr = False
+            End If
+        Else
+            Select Case ch
+                Case """" : inStr = True
+                Case "[", "{" : depth = depth + 1
+                Case "]", "}" : depth = depth - 1
+                Case ","
+                    If depth = 0 Then
+                        ReDim Preserve res(n)
+                        res(n) = Trim$(Mid$(arrText, startEl, i - startEl))
+                        n = n + 1
+                        startEl = i + 1
+                    End If
+            End Select
+        End If
+    Next i
+    If startEl <= Len(arrText) - 1 Then
+        ReDim Preserve res(n)
+        res(n) = Trim$(Mid$(arrText, startEl, (Len(arrText) - 1) - startEl + 1))
+    End If
+    If n = 0 And (Len(arrText) <= 2 Or Trim$(Mid$(arrText, 2, Len(arrText) - 2)) = "") Then
+        Json_SplitTopLevelArray = Array()
+    Else
+        Json_SplitTopLevelArray = res
+    End If
+End Function
+
+Private Function JsonHasKey(ByVal json As String, ByVal key As String) As Boolean
+    JsonHasKey = (Json_FindKeyAtTopLevel(json, key) > 0)
+End Function
+
+Function ParseJsonArray(ByVal arrText As String) As Variant
+    ' Robustly parse a flat array of numbers or strings
+    Dim elems As Variant, i As Long
+    Dim out() As Variant
+    elems = Json_SplitTopLevelArray(arrText)
+    If IsEmpty(elems) Then
         ParseJsonArray = Array()
         Exit Function
     End If
-    parts = Split(cleaned, ",")
-    For i = 0 To UBound(parts)
-        parts(i) = Trim(parts(i))
-        If Left(parts(i), 1) = """" And Right(parts(i), 1) = """" Then
-            parts(i) = Mid(parts(i), 2, Len(parts(i)) - 2)
-        ElseIf IsNumeric(parts(i)) Then
-            parts(i) = CDbl(parts(i))
+    ReDim out(0 To UBound(elems))
+    For i = 0 To UBound(elems)
+        Dim t As String
+        t = Trim$(elems(i))
+        If Len(t) >= 2 And Left$(t, 1) = """" And Right$(t, 1) = """" Then
+            Dim p As Long: p = 1
+            out(i) = Json_ParseString(t, p)
+        ElseIf IsNumeric(t) Then
+            out(i) = CDbl(t)
+        Else
+            out(i) = t ' boolean/null or literal retained
         End If
     Next i
-    ParseJsonArray = parts
+    ParseJsonArray = out
 End Function
 
-' Parse series array into parallel arrays of names and data
-Sub ParseSeries(seriesText As String, ByRef names() As String, ByRef data() As Variant)
-    Dim inner As String, items As Variant, i As Long
-    inner = Mid(seriesText, 2, Len(seriesText) - 2) ' remove [ ]
-    If Len(inner) = 0 Then Exit Sub
-    items = Split(inner, "},{")
+Sub ParseSeries(ByVal seriesText As String, ByRef names() As String, ByRef data() As Variant)
+    Dim items As Variant
+    Dim i As Long
+    items = Json_SplitTopLevelArray(seriesText)
+    If IsEmpty(items) Then Exit Sub
     ReDim names(0 To UBound(items))
     ReDim data(0 To UBound(items))
     For i = 0 To UBound(items)
-        Dim item As String
-        item = items(i)
-        If Left(item, 1) <> "{" Then item = "{" & item
-        If Right(item, 1) <> "}" Then item = item & "}"
-        names(i) = JsonValue(item, "name")
-        data(i) = ParseJsonArray(JsonValue(item, "data"))
+        Dim obj As String
+        obj = items(i)
+        If Left$(obj, 1) <> "{" Then obj = "{" & obj
+        If Right$(obj, 1) <> "}" Then obj = obj & "}"
+        names(i) = JsonValue(obj, "name")
+        data(i) = ParseJsonArray(JsonValue(obj, "data"))
     Next i
 End Sub
 
-' Parse table rows (array of arrays)
-Function ParseRowArray(rowsText As String) As Variant
-    Dim inner As String, rowParts As Variant, i As Long, res() As Variant
-    inner = Mid(rowsText, 2, Len(rowsText) - 2) ' remove outer [ ]
-    If Len(inner) = 0 Then
+Function ParseRowArray(ByVal rowsText As String) As Variant
+    Dim rows As Variant, i As Long, out() As Variant
+    rows = Json_SplitTopLevelArray(rowsText)
+    If IsEmpty(rows) Then
         ParseRowArray = Array()
         Exit Function
     End If
-    rowParts = Split(inner, "],[")
-    ReDim res(0 To UBound(rowParts))
-    For i = 0 To UBound(rowParts)
+    ReDim out(0 To UBound(rows))
+    For i = 0 To UBound(rows)
         Dim rowStr As String
-        rowStr = rowParts(i)
-        If Left(rowStr, 1) <> "[" Then rowStr = "[" & rowStr
-        If Right(rowStr, 1) <> "]" Then rowStr = rowStr & "]"
-        res(i) = ParseJsonArray(rowStr)
+        rowStr = rows(i)
+        If Left$(rowStr, 1) <> "[" Then rowStr = "[" & rowStr
+        If Right$(rowStr, 1) <> "]" Then rowStr = rowStr & "]"
+        out(i) = ParseJsonArray(rowStr)
     Next i
-    ParseRowArray = res
+    ParseRowArray = out
 End Function
 
 ' Create chart at placeholder location (macOS-safe)
@@ -394,13 +619,15 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
         Case "pie": chartType = xlPie
         Case "area": chartType = xlArea
         Case "scatter": chartType = xlXYScatter
-        Case Else: chartType = xlColumnClustered
+        Case Else
+            LogError "E1009", "Unsupported chart type '" & chartTypeStr & "' - defaulting to column"
+            chartType = xlColumnClustered
     End Select
 
     ' Create chart
     Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
     If chartShape Is Nothing Then
-        MsgBox "Failed to create chart", vbCritical
+        LogError "E1003", "Failed to create chart shape"
         Exit Sub
     End If
     Set chartObj = chartShape.Chart
@@ -408,8 +635,22 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
     Dim xVals As Variant
     Dim seriesNames() As String
     Dim seriesData() As Variant
-    xVals = ParseJsonArray(JsonValue(chartSpec, "x"))
-    ParseSeries JsonValue(chartSpec, "series"), seriesNames, seriesData
+    Dim dataObj As String
+    dataObj = JsonValue(chartSpec, "data")
+    If Len(dataObj) = 0 Then
+        LogError "E1005", "Chart missing 'data' object"
+        Exit Sub
+    End If
+    If Not JsonHasKey(dataObj, "x") Then
+        LogError "E1005", "Chart data missing 'x' categories"
+        Exit Sub
+    End If
+    If Not JsonHasKey(dataObj, "series") Then
+        LogError "E1005", "Chart data missing 'series'"
+        Exit Sub
+    End If
+    xVals = ParseJsonArray(JsonValue(dataObj, "x"))
+    ParseSeries JsonValue(dataObj, "series"), seriesNames, seriesData
 
     With chartObj.ChartData
         .Activate
@@ -430,7 +671,12 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
             Next i
         Next j
 
+        On Error Resume Next
         chartObj.SetSourceData Source:=ws.Range(ws.Cells(1, 1), ws.Cells(UBound(xVals) + 2, UBound(seriesNames) + 2))
+        If Err.Number <> 0 Then
+            LogError "E1011", "Failed to set chart source data: " & Err.Description
+            Err.Clear
+        End If
         .Workbook.Close
     End With
 
@@ -456,6 +702,14 @@ Sub CreateTableAtPlaceholder(sld As Slide, placeholder As Shape, tableSpec As St
     placeholder.Delete
 
     ' Parse table spec
+    If Not JsonHasKey(tableSpec, "headers") Then
+        LogError "E1005", "Table missing 'headers'"
+        Exit Sub
+    End If
+    If Not JsonHasKey(tableSpec, "rows") Then
+        LogError "E1005", "Table missing 'rows'"
+        Exit Sub
+    End If
     headers = ParseJsonArray(JsonValue(tableSpec, "headers"))
     rows = ParseRowArray(JsonValue(tableSpec, "rows"))
 
@@ -523,34 +777,32 @@ End Sub
             code.append(f"    ' {ph_type} placeholder (ordinal {ordinal})")
             code.append(f"    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, {type_id}, {ordinal})")
             code.append(f"    If shp Is Nothing Then")
-            code.append(f'        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide {slide_num}:" & vbCrLf & _')
-            code.append(f'               "Type: {ph_type} (type_id={type_id})" & vbCrLf & _')
-            code.append(f'               "Ordinal: {ordinal}" & vbCrLf & vbCrLf & _')
-            code.append(f'               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"')
-            code.append(f"        Exit Sub")
-            code.append(f"    End If")
+            code.append(
+                f'        LogError "E1002", "Slide {slide_num}: Missing placeholder Type={ph_type} (type_id={type_id}), Ordinal={ordinal}"')
+            code.append(f"    Else")
 
             if content_type == "text":
                 # Handle text content
                 text = self._vba_escape(content_data)
                 if '\n' in content_data or '•' in content_data or '-' in content_data:
                     # Multi-line or bullet text
-                    code.append(f'    SafeSetText shp, "{text}"')
+                    code.append(f'        SafeSetText shp, "{text}"')
                 else:
                     # Simple text
-                    code.append(f'    SafeSetText shp, "{text}"')
+                    code.append(f'        SafeSetText shp, "{text}"')
 
             elif content_type == "chart":
-                # Handle chart
-                chart_json = json.dumps(content_data, ensure_ascii=False)
+                # Handle chart - emit compact JSON (no spaces) for simpler VBA parsing
+                chart_json = json.dumps(content_data, ensure_ascii=False, separators=(",", ":"))
                 chart_escaped = self._vba_escape(chart_json)
-                code.append(f'    CreateChartAtPlaceholder currentSlide, shp, "{chart_escaped}"')
+                code.append(f'        CreateChartAtPlaceholder currentSlide, shp, "{chart_escaped}"')
 
             elif content_type == "table":
-                # Handle table
-                table_json = json.dumps(content_data, ensure_ascii=False)
+                # Handle table - emit compact JSON (no spaces) for simpler VBA parsing
+                table_json = json.dumps(content_data, ensure_ascii=False, separators=(",", ":"))
                 table_escaped = self._vba_escape(table_json)
-                code.append(f'    CreateTableAtPlaceholder currentSlide, shp, "{table_escaped}"')
+                code.append(f'        CreateTableAtPlaceholder currentSlide, shp, "{table_escaped}"')
+            code.append(f"    End If")
             code.append("")
 
         return code
@@ -568,10 +820,12 @@ End Sub
         code.append("")
         code.append("Sub Main()")
         code.append("    On Error GoTo ErrorHandler")
+        code.append("    InitErrorLog")
         code.append("")
         code.append("    ' Validate environment")
         code.append("    If Application.Presentations.Count = 0 Then")
-        code.append('        MsgBox "Please open a PowerPoint presentation first.", vbExclamation')
+        code.append('        LogError "E1007", "No active presentation open"')
+        code.append("        ShowErrors")
         code.append("        Exit Sub")
         code.append("    End If")
         code.append("")
@@ -597,10 +851,10 @@ End Sub
         code.append("        If Not CacheHas(CLng(layoutIndex)) Then")
         code.append("            Set cl = GetCustomLayoutByIndexSafe(CLng(layoutIndex))")
         code.append("            If cl Is Nothing Then")
-        code.append('                MsgBox "Layout index " & layoutIndex & " not found in template. Check that you have the correct template open.", vbCritical')
-        code.append("                Exit Sub")
+        code.append('                LogError "E1008", "Layout index " & layoutIndex & " not found in template"')
+        code.append("            Else")
+        code.append("                CachePut CLng(layoutIndex), cl")
         code.append("            End If")
-        code.append("            CachePut CLng(layoutIndex), cl")
         code.append("        End If")
         code.append("    Next layoutIndex")
         code.append("")
@@ -612,8 +866,12 @@ End Sub
             code.extend(slide_code)
 
         code.append("")
-        code.append("    ' Success message")
-        code.append(f'    MsgBox "Successfully created {len(self.plan["slides"])} slides!", vbInformation')
+        code.append("    ' Report outcome")
+        code.append("    If ErrorsCount() > 0 Then")
+        code.append("        ShowErrors")
+        code.append("    Else")
+        code.append(f'        MsgBox "Successfully created {len(self.plan["slides"])} slides!", vbInformation')
+        code.append("    End If")
         code.append("    Exit Sub")
         code.append("")
         code.append("ErrorHandler:")

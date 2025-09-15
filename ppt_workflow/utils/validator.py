@@ -86,7 +86,11 @@ class WorkflowValidator:
             base = key
 
         # Check known types
-        known_types = ["title", "body", "subtitle", "chart", "table", "picture", "content"]
+        known_types = [
+            "title", "centertitle", "subtitle",
+            "body", "object", "content",
+            "chart", "table", "picture", "slideimage"
+        ]
         if base.lower() not in known_types:
             self.warnings.append(f"Slide {slide_num}: Unknown placeholder type '{base}'")
 

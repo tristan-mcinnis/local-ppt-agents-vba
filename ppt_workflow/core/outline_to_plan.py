@@ -4,7 +4,7 @@ Deterministic mapping of content to template layouts with exact indices and plac
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 
@@ -116,9 +116,10 @@ class OutlineToPlanConverter:
     def _determine_content_type(self, value: Any, placeholder_type: str) -> Tuple[str, Any]:
         """Determine content type and validate/transform content data"""
         if placeholder_type in ("picture", "slideimage"):
-            if not isinstance(value, str) or not value.strip():
-                raise ValueError(f"Expected image path for {placeholder_type}, got: {value}")
-            return "image_path", value.strip()
+            # Robust behavior: skip images entirely in planning to avoid fragility
+            # Images are not required for slide creation; they can be added manually later.
+            # If a path is provided, we still skip to keep content deterministic.
+            return "skip", None
 
         elif placeholder_type == "chart":
             if not isinstance(value, dict):
@@ -223,6 +224,13 @@ class OutlineToPlanConverter:
 
             type_id, canonical_name = self.TYPE_MAP[base]
 
+            # Skip image placeholders entirely before validation to avoid unnecessary errors
+            if base in ("picture", "slideimage"):
+                self.warnings.append(
+                    f"Slide {slide_no}: Skipping image placeholder '{key}'"
+                )
+                continue
+
             # Validate placeholder exists
             if not self._validate_placeholder(layout, canonical_name, type_id, ordinal,
                                              slide_no, key):
@@ -233,6 +241,13 @@ class OutlineToPlanConverter:
                 content_type, content_data = self._determine_content_type(value, base)
             except ValueError as e:
                 self.errors.append(f"Slide {slide_no}, placeholder '{key}': {e}")
+                continue
+
+            # Skip non-essential content types
+            if content_type == "skip":
+                self.warnings.append(
+                    f"Slide {slide_no}: Skipping non-essential placeholder '{key}'"
+                )
                 continue
 
             # Add to content map with canonical name
@@ -328,7 +343,7 @@ class OutlineToPlanConverter:
                 "total_layouts": len(self.analysis.get("layouts", [])),
                 "platform_targets": platform_targets,
                 "planner_version": "4.0-python",
-                "created_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             },
             "layout_strategy": layout_strategy,
             "slides": slides,
