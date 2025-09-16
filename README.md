@@ -132,6 +132,21 @@ python core/plan_to_vba.py output/slide_plan.json output/generated_script.vba
 python utils/validator.py outline.json template_analysis.json output/slide_plan.json output/generated_script.vba
 ```
 
+## macOS Setup and Tips
+
+- Use Homebrew `python3` (`brew install python`) and run the workflow with `python3`.
+- Install dependencies with `pip3 install -r requirements-macos.txt`.
+- Open the VBA editor with **Opt+F11** instead of Alt+F11.
+- If macros are disabled, enable them via **PowerPoint → Preferences → Security & Privacy → Macro Security**.
+- You can run macros from the terminal:
+
+```bash
+osascript -e 'tell application "Microsoft PowerPoint" to run macro "Main"'
+```
+
+- Paths on macOS can be case-sensitive; ensure your `outline.json` and `template_analysis.json` names match exactly.
+- Run `scripts/mac_env_check.py` to verify your Python environment.
+
 ## Project Structure
 
 ```

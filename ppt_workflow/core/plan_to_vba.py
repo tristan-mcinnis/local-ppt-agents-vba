@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from ppt_workflow.utils.path_utils import normalize_path
+
 
 class PlanToVBAConverter:
     """Converts slide plan to executable VBA script"""
@@ -25,12 +27,21 @@ class PlanToVBAConverter:
         self.code_lines = []
         self.used_layouts = set()
         self.debug_slide = debug_slide
+        self.missing_images: List[Dict[str, Any]] = []
+        self._scan_image_paths()
 
     @staticmethod
     def _load_json(path: str) -> Dict:
-        """Load and parse JSON file"""
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        """Load and parse JSON file with macOS-friendly error reporting"""
+        norm_path = normalize_path(path)
+        try:
+            with open(norm_path, 'r', encoding='utf-8', newline='') as f:
+                return json.load(f)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                f"File not found: {norm_path}. On macOS, verify the path "
+                "spelling and file permissions."
+            ) from e
 
     @staticmethod
     def _vba_escape(s: str) -> str:
@@ -42,6 +53,19 @@ class PlanToVBAConverter:
         # Handle newlines
         s = s.replace('\n', '" & vbCrLf & "')
         return s
+
+    def _scan_image_paths(self) -> None:
+        """Pre-scan plan for image placeholders to record missing files."""
+        for slide in self.plan.get("slides", []):
+            slide_no = slide.get("slide_number")
+            for item in slide.get("content_map", []):
+                if item.get("content_type") == "image_path":
+                    path = item.get("content_data", "")
+                    if not Path(path).exists():
+                        self.missing_images.append({
+                            "slide": slide_no,
+                            "path": path,
+                        })
 
     def _generate_header(self) -> str:
         """Generate VBA file header with constants and declarations"""
@@ -624,8 +648,12 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
             chartType = xlColumnClustered
     End Select
 
-    ' Create chart
-    Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
+    ' Create chart with platform fallback
+    #If Mac Then
+        Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
+    #Else
+        Set chartShape = sld.Shapes.AddChart2(201, chartType, l, t, w, h)
+    #End If
     If chartShape Is Nothing Then
         LogError "E1003", "Failed to create chart shape"
         Exit Sub
@@ -769,12 +797,17 @@ End Sub
             content_type = content["content_type"]
             content_data = content["content_data"]
 
-            # Skip image placeholders entirely
+            # Skip image placeholders entirely but warn if file missing
             if content_type == "image_path":
-                image_path = self._vba_escape(content_data)
-                code.append(f"    ")
-                code.append(f"    ' Image placeholder skipped: {image_path}")
-                code.append(f"    ' User will add image manually after slides are created")
+                image_path = content_data
+                escaped_path = self._vba_escape(image_path)
+                if not Path(image_path).exists():
+                    code.append("    ")
+                    code.append(f"    ' WARNING: Image file not found: {escaped_path}")
+                else:
+                    code.append("    ")
+                    code.append(f"    ' Image placeholder: {escaped_path}")
+                code.append("    ' User will add image manually after slides are created")
                 code.append("")
                 continue
 
@@ -964,6 +997,10 @@ def main():
     layout_count = len(converter.used_layouts)
     print(f"✓ Generated VBA script for {slide_count} slides using {layout_count} layouts")
     print(f"✓ Script saved to: {output_path}")
+    if converter.missing_images:
+        print("⚠ Missing image files detected:")
+        for item in converter.missing_images:
+            print(f"  - Slide {item['slide']}: {item['path']}")
     print("\nNext steps:")
     print("1. Open your PowerPoint template")
     print("2. Press Alt+F11 (Windows) or Opt+F11 (Mac)")

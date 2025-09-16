@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 
+from ppt_workflow.utils.path_utils import normalize_path
+
 
 class OutlineToPlanConverter:
     """Converts user outline to strict slide plan using template analysis"""
@@ -37,9 +39,16 @@ class OutlineToPlanConverter:
 
     @staticmethod
     def _load_json(path: str) -> Dict:
-        """Load and parse JSON file"""
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        """Load and parse JSON file with macOS-friendly error reporting"""
+        norm_path = normalize_path(path)
+        try:
+            with open(norm_path, 'r', encoding='utf-8', newline='') as f:
+                return json.load(f)
+        except FileNotFoundError as e:
+            raise FileNotFoundError(
+                f"File not found: {norm_path}. On macOS, check path spelling and "
+                "permissions."
+            ) from e
 
     @staticmethod
     def _normalize_name(s: str) -> str:
