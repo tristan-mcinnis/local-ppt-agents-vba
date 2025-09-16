@@ -655,7 +655,12 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
     With chartObj.ChartData
         .Activate
         Dim ws As Object
+        Set ws = Nothing
         Set ws = .Workbook.Worksheets(1)
+        If ws Is Nothing Then
+            LogError "E1011", "Chart data workbook not available (ChartData.Workbook)"
+            Exit Sub
+        End If
         ws.Cells.Clear
 
         Dim i As Long, j As Long

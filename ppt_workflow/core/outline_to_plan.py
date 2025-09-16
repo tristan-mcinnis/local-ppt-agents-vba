@@ -331,9 +331,16 @@ class OutlineToPlanConverter:
             "contact_index": ("contact-slide-white", "content"),
         }
 
+        # Best-effort strategy lookup: do not fail conversion if hints are missing
         layout_strategy = {}
         for key, (name, category) in layout_names.items():
-            layout_strategy[key] = self._find_layout_index(name, category)
+            try:
+                layout_strategy[key] = self._find_layout_index(name, category)
+            except ValueError as e:
+                self.warnings.append(
+                    f"Layout strategy hint '{key}' unresolved for template: {e}"
+                )
+                # Leave key absent rather than failing conversion
 
         # Build complete plan
         plan = {
