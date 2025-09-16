@@ -1,30 +1,30 @@
 {
   "meta": {
-    "template_name": "ic-template-1.pptx",
-    "analysis_date": "2025-09-12T17:19:00Z",
-    "total_layouts": 59,
+    "template_name": "Standard Template.pptx",
+    "analysis_date": "2024-01-15T10:30:00Z",
+    "total_layouts": 11,
     "platform_targets": [
       "macos",
       "windows"
     ],
     "planner_version": "4.0-python",
-    "created_at": "2025-09-14T11:37:07Z"
+    "created_at": "2025-09-16T05:47:23Z"
   },
   "layout_strategy": {
-    "title_slide_index": 58,
-    "two_column_index": 6,
-    "three_column_index": 8,
-    "chart_layout_index": 59,
-    "standard_content_index": 56,
-    "contact_index": 54
+    "title_slide_index": 1,
+    "two_column_index": 2,
+    "three_column_index": 2,
+    "chart_layout_index": 2,
+    "standard_content_index": 2,
+    "contact_index": 2
   },
   "slides": [
     {
       "slide_number": 1,
-      "slide_title": "Demo Deck",
+      "slide_title": "Test Presentation",
       "selected_layout": {
         "name": "Title Slide",
-        "index": 58,
+        "index": 1,
         "reason": "exact_name_match"
       },
       "addressing": "by_type_then_ordinal",
@@ -39,11 +39,6 @@
           "type": "Subtitle",
           "type_id": 4,
           "ordinal": 0
-        },
-        {
-          "type": "SlideImage",
-          "type_id": 13,
-          "ordinal": 0
         }
       ],
       "platform_hints": {
@@ -57,21 +52,14 @@
           "type_id": 3,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "Building a Modern Data Product"
+          "content_data": "Welcome to the Test"
         },
         {
           "placeholder_type": "Subtitle",
           "type_id": 4,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "From concept to launch in 6 weeks"
-        },
-        {
-          "placeholder_type": "SlideImage",
-          "type_id": 13,
-          "ordinal": 0,
-          "content_type": "image_path",
-          "content_data": "assets/logo.png"
+          "content_data": "A Simple Example"
         }
       ]
     },
@@ -79,8 +67,8 @@
       "slide_number": 2,
       "slide_title": "Agenda",
       "selected_layout": {
-        "name": "title-two-text",
-        "index": 6,
+        "name": "Title and Content",
+        "index": 2,
         "reason": "exact_name_match"
       },
       "addressing": "by_type_then_ordinal",
@@ -95,11 +83,6 @@
           "type": "Body",
           "type_id": 2,
           "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 1
         }
       ],
       "platform_hints": {
@@ -120,79 +103,16 @@
           "type_id": 2,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "- Vision and goals\n- Users and use cases\n- Architecture overview\n- Prototype demo\n- Metrics & timeline"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 1,
-          "content_type": "text",
-          "content_data": "- Risks & mitigations\n- Team & roles\n- Budget overview\n- Q&A"
+          "content_data": "• Introduction\n• Main Content\n• Conclusion"
         }
       ]
     },
     {
       "slide_number": 3,
-      "slide_title": "Vision",
+      "slide_title": "Comparison",
       "selected_layout": {
-        "name": "title-one-text-right-one-image-left",
-        "index": 13,
-        "reason": "exact_name_match"
-      },
-      "addressing": "by_type_then_ordinal",
-      "fill_policy": "strict_match",
-      "placeholders_expected": [
-        {
-          "type": "Title",
-          "type_id": 1,
-          "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 0
-        },
-        {
-          "type": "Picture",
-          "type_id": 18,
-          "ordinal": 0
-        }
-      ],
-      "platform_hints": {
-        "mac_safe": true,
-        "chart_api": "AddChart",
-        "text_api": "TextFrame2_with_fallback"
-      },
-      "content_map": [
-        {
-          "placeholder_type": "Title",
-          "type_id": 1,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "Vision"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "Deliver self-serve analytics to 3,000+ internal users with sub-2s query latency and governed data access."
-        },
-        {
-          "placeholder_type": "Picture",
-          "type_id": 18,
-          "ordinal": 0,
-          "content_type": "image_path",
-          "content_data": "images/hero-dashboard.jpg"
-        }
-      ]
-    },
-    {
-      "slide_number": 4,
-      "slide_title": "Key Personas",
-      "selected_layout": {
-        "name": "one-title-two-text-two-image-gap",
-        "index": 21,
+        "name": "Two Content",
+        "index": 4,
         "reason": "exact_name_match"
       },
       "addressing": "by_type_then_ordinal",
@@ -212,16 +132,6 @@
           "type": "Body",
           "type_id": 2,
           "ordinal": 1
-        },
-        {
-          "type": "Picture",
-          "type_id": 18,
-          "ordinal": 0
-        },
-        {
-          "type": "Picture",
-          "type_id": 18,
-          "ordinal": 1
         }
       ],
       "platform_hints": {
@@ -235,443 +145,21 @@
           "type_id": 1,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "Key Personas"
+          "content_data": "Comparison"
         },
         {
           "placeholder_type": "Body",
           "type_id": 2,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "**Analyst**\n- Ad-hoc exploration\n- SQL power-user\n- Needs versioned datasets"
+          "content_data": "Left Side:\n• Point 1\n• Point 2"
         },
         {
           "placeholder_type": "Body",
           "type_id": 2,
           "ordinal": 1,
           "content_type": "text",
-          "content_data": "**Manager**\n- Weekly KPIs\n- Email/PDF exports\n- SLA: 9 am Monday"
-        },
-        {
-          "placeholder_type": "Picture",
-          "type_id": 18,
-          "ordinal": 0,
-          "content_type": "image_path",
-          "content_data": "images/persona-analyst.png"
-        },
-        {
-          "placeholder_type": "Picture",
-          "type_id": 18,
-          "ordinal": 1,
-          "content_type": "image_path",
-          "content_data": "images/persona-manager.png"
-        }
-      ]
-    },
-    {
-      "slide_number": 5,
-      "slide_title": "North Star Metrics",
-      "selected_layout": {
-        "name": "Title, Text and Chart",
-        "index": 59,
-        "reason": "exact_name_match"
-      },
-      "addressing": "by_type_then_ordinal",
-      "fill_policy": "strict_match",
-      "placeholders_expected": [
-        {
-          "type": "Title",
-          "type_id": 1,
-          "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 0
-        },
-        {
-          "type": "Chart",
-          "type_id": 8,
-          "ordinal": 0
-        }
-      ],
-      "platform_hints": {
-        "mac_safe": true,
-        "chart_api": "AddChart",
-        "text_api": "TextFrame2_with_fallback"
-      },
-      "content_map": [
-        {
-          "placeholder_type": "Title",
-          "type_id": 1,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "North Star Metrics"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "- Weekly Active Users (WAU)\n- Median query latency (s)\n- Dashboard share rate (%)\n- Data freshness (hrs)"
-        },
-        {
-          "placeholder_type": "Chart",
-          "type_id": 8,
-          "ordinal": 0,
-          "content_type": "chart",
-          "content_data": {
-            "type": "line",
-            "data": {
-              "x": [
-                "Week 1",
-                "Week 2",
-                "Week 3",
-                "Week 4",
-                "Week 5",
-                "Week 6"
-              ],
-              "series": [
-                {
-                  "name": "WAU",
-                  "data": [
-                    200,
-                    380,
-                    520,
-                    780,
-                    1100,
-                    1400
-                  ]
-                },
-                {
-                  "name": "Median Latency (s)",
-                  "data": [
-                    3.2,
-                    2.8,
-                    2.4,
-                    2.1,
-                    1.9,
-                    1.7
-                  ]
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "slide_number": 6,
-      "slide_title": "High-Level Architecture",
-      "selected_layout": {
-        "name": "title-text-left-image-right",
-        "index": 25,
-        "reason": "exact_name_match"
-      },
-      "addressing": "by_type_then_ordinal",
-      "fill_policy": "strict_match",
-      "placeholders_expected": [
-        {
-          "type": "Title",
-          "type_id": 1,
-          "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 0
-        },
-        {
-          "type": "Picture",
-          "type_id": 18,
-          "ordinal": 0
-        }
-      ],
-      "platform_hints": {
-        "mac_safe": true,
-        "chart_api": "AddChart",
-        "text_api": "TextFrame2_with_fallback"
-      },
-      "content_map": [
-        {
-          "placeholder_type": "Title",
-          "type_id": 1,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "High-Level Architecture"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "- Ingest: CDC + batch (Kafka, Airflow)\n- Lakehouse: Parquet + Delta\n- Query: DuckDB + Presto\n- Serving: REST + BI\n- AuthZ: OPA + Column-masking"
-        },
-        {
-          "placeholder_type": "Picture",
-          "type_id": 18,
-          "ordinal": 0,
-          "content_type": "image_path",
-          "content_data": "images/arch-overview.png"
-        }
-      ]
-    },
-    {
-      "slide_number": 7,
-      "slide_title": "Data Contracts Snapshot",
-      "selected_layout": {
-        "name": "title-three-text",
-        "index": 8,
-        "reason": "exact_name_match"
-      },
-      "addressing": "by_type_then_ordinal",
-      "fill_policy": "strict_match",
-      "placeholders_expected": [
-        {
-          "type": "Title",
-          "type_id": 1,
-          "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 1
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 2
-        }
-      ],
-      "platform_hints": {
-        "mac_safe": true,
-        "chart_api": "AddChart",
-        "text_api": "TextFrame2_with_fallback"
-      },
-      "content_map": [
-        {
-          "placeholder_type": "Title",
-          "type_id": 1,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "Data Contracts Snapshot"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "**Orders v2**\n- PII tags: none\n- SLA: 15 min\n- Owner: Sales Eng"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 1,
-          "content_type": "text",
-          "content_data": "**Customers v1**\n- PII tags: email\n- SLA: hourly\n- Owner: CRM"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 2,
-          "content_type": "text",
-          "content_data": "**Events v3**\n- PII tags: anon_id\n- SLA: near-real-time\n- Owner: Platform"
-        }
-      ]
-    },
-    {
-      "slide_number": 8,
-      "slide_title": "Prototype Screens",
-      "selected_layout": {
-        "name": "title-three-image-three-text",
-        "index": 38,
-        "reason": "exact_name_match"
-      },
-      "addressing": "by_type_then_ordinal",
-      "fill_policy": "strict_match",
-      "placeholders_expected": [
-        {
-          "type": "Title",
-          "type_id": 1,
-          "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 1
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 2
-        },
-        {
-          "type": "Picture",
-          "type_id": 18,
-          "ordinal": 0
-        },
-        {
-          "type": "Picture",
-          "type_id": 18,
-          "ordinal": 1
-        },
-        {
-          "type": "Picture",
-          "type_id": 18,
-          "ordinal": 2
-        }
-      ],
-      "platform_hints": {
-        "mac_safe": true,
-        "chart_api": "AddChart",
-        "text_api": "TextFrame2_with_fallback"
-      },
-      "content_map": [
-        {
-          "placeholder_type": "Title",
-          "type_id": 1,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "Prototype Screens"
-        },
-        {
-          "placeholder_type": "Picture",
-          "type_id": 18,
-          "ordinal": 0,
-          "content_type": "image_path",
-          "content_data": "images/screen-explore.png"
-        },
-        {
-          "placeholder_type": "Picture",
-          "type_id": 18,
-          "ordinal": 1,
-          "content_type": "image_path",
-          "content_data": "images/screen-dashboard.png"
-        },
-        {
-          "placeholder_type": "Picture",
-          "type_id": 18,
-          "ordinal": 2,
-          "content_type": "image_path",
-          "content_data": "images/screen-share.png"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "Explore\n- Column profiler\n- Query hints"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 1,
-          "content_type": "text",
-          "content_data": "Dashboard\n- Filters\n- Cohorts"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 2,
-          "content_type": "text",
-          "content_data": "Share\n- Links & embeds\n- Expiring tokens"
-        }
-      ]
-    },
-    {
-      "slide_number": 9,
-      "slide_title": "Risks & Mitigations",
-      "selected_layout": {
-        "name": "Title and Text",
-        "index": 56,
-        "reason": "exact_name_match"
-      },
-      "addressing": "by_type_then_ordinal",
-      "fill_policy": "strict_match",
-      "placeholders_expected": [
-        {
-          "type": "Title",
-          "type_id": 1,
-          "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 0
-        }
-      ],
-      "platform_hints": {
-        "mac_safe": true,
-        "chart_api": "AddChart",
-        "text_api": "TextFrame2_with_fallback"
-      },
-      "content_map": [
-        {
-          "placeholder_type": "Title",
-          "type_id": 1,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "Risks & Mitigations"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "- Data freshness SLAs might slip → Add backfill monitors and retry budgets\n- Governance gaps → Enforce policy-as-code and lineage checks in CI\n- Cost overruns → Right-size clusters, auto-suspend idle, tiered storage\n- Adoption lag → Champions program, office hours, template gallery"
-        }
-      ]
-    },
-    {
-      "slide_number": 10,
-      "slide_title": "Thank You",
-      "selected_layout": {
-        "name": "contact-slide-white",
-        "index": 54,
-        "reason": "exact_name_match"
-      },
-      "addressing": "by_type_then_ordinal",
-      "fill_policy": "strict_match",
-      "placeholders_expected": [
-        {
-          "type": "Title",
-          "type_id": 1,
-          "ordinal": 0
-        },
-        {
-          "type": "Body",
-          "type_id": 2,
-          "ordinal": 0
-        }
-      ],
-      "platform_hints": {
-        "mac_safe": true,
-        "chart_api": "AddChart",
-        "text_api": "TextFrame2_with_fallback"
-      },
-      "content_map": [
-        {
-          "placeholder_type": "Title",
-          "type_id": 1,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "Thank You"
-        },
-        {
-          "placeholder_type": "Body",
-          "type_id": 2,
-          "ordinal": 0,
-          "content_type": "text",
-          "content_data": "Contact\n- Product: product@company.com\n- Slack: #data-product\n- Docs: https://docs.company.com/data-product"
+          "content_data": "Right Side:\n• Point A\n• Point B"
         }
       ]
     }
@@ -684,18 +172,17 @@
       "content_fidelity_exact"
     ],
     "errors": [],
-    "warnings": []
+    "warnings": [
+      "Layout 'title-two-text' not found. Using 'Title and Content' (index 2) as fallback.",
+      "Layout 'title-three-text' not found. Using 'Title and Content' (index 2) as fallback.",
+      "Layout 'Title, Text and Chart' not found. Using 'Title and Content' (index 2) as fallback.",
+      "Layout 'Title and Text' not found. Using 'Title and Content' (index 2) as fallback.",
+      "Layout 'contact-slide-white' not found. Using 'Title and Content' (index 2) as fallback."
+    ]
   },
   "layout_usage_summary": {
     "Title Slide": 1,
-    "title-two-text": 1,
-    "title-one-text-right-one-image-left": 1,
-    "one-title-two-text-two-image-gap": 1,
-    "Title, Text and Chart": 1,
-    "title-text-left-image-right": 1,
-    "title-three-text": 1,
-    "title-three-image-three-text": 1,
-    "Title and Text": 1,
-    "contact-slide-white": 1
+    "Title and Content": 1,
+    "Two Content": 1
   }
 }
