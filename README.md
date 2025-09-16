@@ -107,6 +107,16 @@ Behavior:
 
 ## Running the Pipeline
 
+Quick setup (uses uv for fast, isolated env):
+
+```bash
+# From repo root
+./setup.sh
+
+# Run examples
+uv run python ppt_workflow/workflow.py ppt_workflow/examples/simple_outline.json ppt_workflow/examples/template_analysis.json
+```
+
 ```bash
 # From repo root
 cd ppt_workflow
@@ -165,4 +175,3 @@ The tests cover outline→plan basics, VBA generation presence checks, and robus
 - Chart/table issues: ensure JSON matches the documented shape. The error summary will indicate the missing key (E1005).
 
 If you encounter an error, copy the final error summary (codes + details) and feed it to an LLM for a concise fix suggestion.
-
