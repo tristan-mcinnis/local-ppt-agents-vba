@@ -1,0 +1,68 @@
+{
+  "meta": {
+    "title": "Complex Presentation",
+    "author": "Test Suite",
+    "date": "2024-01-01",
+    "version": "1.0"
+  },
+  "slides": [
+    {
+      "layout": "Title Slide",
+      "placeholders": {
+        "CenterTitle": "Advanced Testing",
+        "Subtitle": "Comprehensive Test Suite"
+      }
+    },
+    {
+      "layout": "Title and Content",
+      "placeholders": {
+        "Title": "Bullet Points",
+        "Body": "• First point\n• Second point\n• Third point with sub-items\n  ◦ Sub-item A\n  ◦ Sub-item B"
+      }
+    },
+    {
+      "layout": "Two Content",
+      "placeholders": {
+        "Title": "Comparison Slide",
+        "Body[0]": "Left side content:\n• Point 1\n• Point 2",
+        "Body[1]": "Right side content:\n• Point A\n• Point B"
+      }
+    },
+    {
+      "layout": "Title Only",
+      "placeholders": {
+        "Title": "Section Break"
+      }
+    },
+    {
+      "layout": "Content with Caption",
+      "placeholders": {
+        "Title": "Chart Example",
+        "Chart": {
+          "type": "column",
+          "data": {
+            "x": ["Q1", "Q2", "Q3", "Q4"],
+            "series": [
+              {"name": "Revenue", "data": [100, 150, 125, 200]},
+              {"name": "Costs", "data": [80, 90, 85, 95]}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "layout": "Title and Content",
+      "placeholders": {
+        "Title": "Table Example",
+        "Table": {
+          "headers": ["Product", "Q1", "Q2", "Q3", "Q4"],
+          "rows": [
+            ["Product A", "100", "150", "125", "200"],
+            ["Product B", "80", "90", "85", "95"],
+            ["Product C", "120", "140", "130", "160"]
+          ]
+        }
+      }
+    }
+  ]
+}

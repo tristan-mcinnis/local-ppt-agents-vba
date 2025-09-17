@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "title": "Edge Cases Test",
+    "author": "Test Suite"
+  },
+  "slides": [
+    {
+      "layout": "Title Slide",
+      "placeholders": {
+        "Title": "Special \"Characters\" & Symbols",
+        "Subtitle": "Testing: <>&\"'\\n\\t"
+      }
+    },
+    {
+      "layout": "Title and Content",
+      "placeholders": {
+        "Title": "",
+        "Body": ""
+      }
+    },
+    {
+      "layout": "Two Content",
+      "placeholders": {
+        "Title": "Very Long Title That Exceeds Normal Length Expectations And Tests The System's Ability To Handle Extended Text Content Without Breaking Or Truncating In Unexpected Ways",
+        "Body[0]": "Single line",
+        "Body[99]": "Invalid ordinal test"
+      }
+    },
+    {
+      "layout": "NonExistentLayout",
+      "placeholders": {
+        "Title": "This should fallback"
+      }
+    },
+    {
+      "layout": "Title and Content",
+      "placeholders": {
+        "InvalidPlaceholder": "This should be skipped",
+        "Title": "Valid Title",
+        "Body[invalid]": "Invalid ordinal format"
+      }
+    },
+    {
+      "layout": "Title and Content",
+      "placeholders": {
+        "Chart": {
+          "type": "invalid_type",
+          "data": {}
+        }
+      }
+    },
+    {
+      "layout": "Title and Content",
+      "placeholders": {
+        "Table": {
+          "headers": [],
+          "rows": []
+        }
+      }
+    }
+  ]
+}

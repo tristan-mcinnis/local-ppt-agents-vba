@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "title": "Minimal Test",
+    "author": "Test Suite"
+  },
+  "slides": [
+    {
+      "layout": "Title Slide",
+      "placeholders": {
+        "CenterTitle": "Simple Test",
+        "Subtitle": "Test subtitle"
+      }
+    }
+  ]
+}

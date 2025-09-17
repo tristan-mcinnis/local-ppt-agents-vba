@@ -1,7 +1,7 @@
 ' ================================================================
 ' AUTO-GENERATED POWERPOINT VBA SCRIPT
-' Generated: 2025-09-14 11:37:07 UTC
-' Template: ic-template-1.pptx
+' Generated: 2025-09-17 01:10:43 UTC
+' Template: Standard Template.pptx
 ' Platform: macOS and Windows compatible
 ' ================================================================
 '
@@ -49,6 +49,7 @@ Const xlXYScatter As Long = -4169
 
 ' Module-level cache for layouts (macOS-safe Collection instead of Scripting.Dictionary)
 Dim layoutCache As Collection
+Dim errorLog As Collection
 
 ' Check if layout cache has a key (macOS-safe)
 Private Function CacheHas(key As Long) As Boolean
@@ -214,6 +215,331 @@ Sub DebugListPlaceholders(s As Slide)
     Debug.Print "=== End of placeholder list ==="
 End Sub
 
+' ----- Error Logging Helpers -----
+Sub InitErrorLog()
+    Set errorLog = New Collection
+End Sub
+
+Sub LogError(code As String, details As String)
+    On Error Resume Next
+    If errorLog Is Nothing Then Set errorLog = New Collection
+    errorLog.Add code & ": " & details
+    On Error GoTo 0
+End Sub
+
+Function ErrorsCount() As Long
+    If errorLog Is Nothing Then
+        ErrorsCount = 0
+    Else
+        ErrorsCount = errorLog.Count
+    End If
+End Function
+
+Sub ShowErrors()
+    If errorLog Is Nothing Or errorLog.Count = 0 Then Exit Sub
+    Dim i As Long
+    Dim msg As String
+    msg = "Encountered " & errorLog.Count & " issue(s):" & vbCrLf & vbCrLf
+    For i = 1 To errorLog.Count
+        msg = msg & "- " & errorLog(i) & vbCrLf
+        If i >= 12 Then
+            msg = msg & "... (more omitted)" & vbCrLf
+            Exit For
+        End If
+    Next i
+    MsgBox msg, vbExclamation, "PowerPoint Script Issues"
+End Sub
+
+' ----- JSON Parsing Helpers (robust) -----
+Private Sub Json_SkipWs(ByVal s As String, ByRef pos As Long)
+    Dim ch As String
+    Do While pos <= Len(s)
+        ch = Mid$(s, pos, 1)
+        If ch <> " " And ch <> vbTab And ch <> vbCr And ch <> vbLf Then Exit Do
+        pos = pos + 1
+    Loop
+End Sub
+
+Private Function Json_ParseString(ByVal s As String, ByRef pos As Long) As String
+    Dim res As String, ch As String, esc As Boolean
+    Dim code As String, uVal As Integer
+    ' Assumes current pos points at opening quote
+    pos = pos + 1
+    Do While pos <= Len(s)
+        ch = Mid$(s, pos, 1)
+        pos = pos + 1
+        If esc Then
+            Select Case ch
+                Case """: res = res & ""
+                Case "": res = res & ""
+                Case "/": res = res & "/"
+                Case "b": res = res & Chr$(8)
+                Case "f": res = res & Chr$(12)
+                Case "n": res = res & vbLf
+                Case "r": res = res & vbCr
+                Case "t": res = res & vbTab
+                Case "u"
+                    If pos + 3 <= Len(s) Then
+                        code = Mid$(s, pos, 4)
+                        On Error Resume Next
+                        uVal = CInt("&H" & code)
+                        If Err.Number = 0 Then
+                            res = res & ChrW$(uVal)
+                        Else
+                            res = res & "?"
+                            Err.Clear
+                        End If
+                        On Error GoTo 0
+                        pos = pos + 4
+                    End If
+                Case Else
+                    res = res & ch
+            End Select
+            esc = False
+        ElseIf ch = "" Then
+            esc = True
+        ElseIf ch = """" Then
+            Exit Do
+        Else
+            res = res & ch
+        End If
+    Loop
+    Json_ParseString = res
+End Function
+
+Private Function Json_FindMatching(ByVal s As String, ByVal startPos As Long, _
+                                   ByVal openCh As String, ByVal closeCh As String) As Long
+    Dim i As Long, depth As Long, ch As String, esc As Boolean, inStr As Boolean
+    depth = 0
+    For i = startPos To Len(s)
+        ch = Mid$(s, i, 1)
+        If inStr Then
+            If esc Then
+                esc = False
+            ElseIf ch = "" Then
+                esc = True
+            ElseIf ch = """" Then
+                inStr = False
+            End If
+        Else
+            If ch = """" Then
+                inStr = True
+            ElseIf ch = openCh Then
+                depth = depth + 1
+            ElseIf ch = closeCh Then
+                depth = depth - 1
+                If depth = 0 Then
+                    Json_FindMatching = i
+                    Exit Function
+                End If
+            End If
+        End If
+    Next i
+    Json_FindMatching = 0
+End Function
+
+Private Function Json_FindKeyAtTopLevel(ByVal s As String, ByVal key As String) As Long
+    ' Returns position of first character of value for key at top-level of object
+    Dim i As Long, ch As String, esc As Boolean, inStr As Boolean, depth As Long
+    Dim k As String, valPos As Long
+    depth = 0
+    i = 1
+    Do While i <= Len(s)
+        ch = Mid$(s, i, 1)
+        If inStr Then
+            If esc Then
+                esc = False
+            ElseIf ch = "" Then
+                esc = True
+            ElseIf ch = """" Then
+                inStr = False
+            End If
+            i = i + 1
+        Else
+            Select Case ch
+                Case """"  ' start string (potential key)
+                    If depth = 1 Then
+                        Dim savePos As Long
+                        savePos = i
+                        k = Json_ParseString(s, i)
+                        Json_SkipWs s, i
+                        If i <= Len(s) And Mid$(s, i, 1) = ":" Then
+                            i = i + 1
+                            Json_SkipWs s, i
+                            If k = key Then
+                                Json_FindKeyAtTopLevel = i
+                                Exit Function
+                            Else
+                                ' skip the value to continue scanning
+                                Dim c As String
+                                c = Mid$(s, i, 1)
+                                If c = """" Then
+                                    Call Json_ParseString(s, i)
+                                ElseIf c = "{" Then
+                                    i = Json_FindMatching(s, i, "{", "}") + 1
+                                ElseIf c = "[" Then
+                                    i = Json_FindMatching(s, i, "[", "]") + 1
+                                Else
+                                    ' literal
+                                    Do While i <= Len(s)
+                                        c = Mid$(s, i, 1)
+                                        If c = "," Or c = "}" Then Exit Do
+                                        i = i + 1
+                                    Loop
+                                End If
+                            End If
+                        End If
+                    Else
+                        ' skip string not at key position
+                        Call Json_ParseString(s, i)
+                    End If
+                Case "{": depth = depth + 1: i = i + 1
+                Case "}": depth = depth - 1: i = i + 1
+                Case "[": depth = depth + 1: i = i + 1
+                Case "]": depth = depth - 1: i = i + 1
+                Case Else: i = i + 1
+            End Select
+        End If
+    Loop
+    Json_FindKeyAtTopLevel = 0
+End Function
+
+Function JsonValue(ByVal json As String, ByVal key As String) As String
+    Dim pos As Long, ch As String, endPos As Long
+    If Len(json) = 0 Then Exit Function
+    ' If this is an object, ensure we start scanning with depth awareness
+    pos = Json_FindKeyAtTopLevel(json, key)
+    If pos = 0 Then Exit Function
+    ch = Mid$(json, pos, 1)
+    Select Case ch
+        Case """"  ' string
+            JsonValue = Json_ParseString(json, pos)
+        Case "["  ' array
+            endPos = Json_FindMatching(json, pos, "[", "]")
+            If endPos > 0 Then JsonValue = Mid$(json, pos, endPos - pos + 1)
+        Case "{"  ' object
+            endPos = Json_FindMatching(json, pos, "{", "}")
+            If endPos > 0 Then JsonValue = Mid$(json, pos, endPos - pos + 1)
+        Case Else ' literal: number, true, false, null
+            endPos = pos
+            Do While endPos <= Len(json)
+                ch = Mid$(json, endPos, 1)
+                If ch = "," Or ch = "}" Or ch = "]" Or ch = vbCr Or ch = vbLf Then Exit Do
+                endPos = endPos + 1
+            Loop
+            JsonValue = Trim$(Mid$(json, pos, endPos - pos))
+    End Select
+End Function
+
+Private Function Json_SplitTopLevelArray(ByVal arrText As String) As Variant
+    Dim res() As String
+    Dim n As Long, i As Long, ch As String, depth As Long
+    Dim inStr As Boolean, esc As Boolean, startEl As Long
+    If Len(arrText) < 2 Then
+        Json_SplitTopLevelArray = Array()
+        Exit Function
+    End If
+    startEl = 2 ' after [
+    For i = 2 To Len(arrText) - 1
+        ch = Mid$(arrText, i, 1)
+        If inStr Then
+            If esc Then
+                esc = False
+            ElseIf ch = "" Then
+                esc = True
+            ElseIf ch = """" Then
+                inStr = False
+            End If
+        Else
+            Select Case ch
+                Case """" : inStr = True
+                Case "[", "{" : depth = depth + 1
+                Case "]", "}" : depth = depth - 1
+                Case ","
+                    If depth = 0 Then
+                        ReDim Preserve res(n)
+                        res(n) = Trim$(Mid$(arrText, startEl, i - startEl))
+                        n = n + 1
+                        startEl = i + 1
+                    End If
+            End Select
+        End If
+    Next i
+    If startEl <= Len(arrText) - 1 Then
+        ReDim Preserve res(n)
+        res(n) = Trim$(Mid$(arrText, startEl, (Len(arrText) - 1) - startEl + 1))
+    End If
+    If n = 0 And (Len(arrText) <= 2 Or Trim$(Mid$(arrText, 2, Len(arrText) - 2)) = "") Then
+        Json_SplitTopLevelArray = Array()
+    Else
+        Json_SplitTopLevelArray = res
+    End If
+End Function
+
+Private Function JsonHasKey(ByVal json As String, ByVal key As String) As Boolean
+    JsonHasKey = (Json_FindKeyAtTopLevel(json, key) > 0)
+End Function
+
+Function ParseJsonArray(ByVal arrText As String) As Variant
+    ' Robustly parse a flat array of numbers or strings
+    Dim elems As Variant, i As Long
+    Dim out() As Variant
+    elems = Json_SplitTopLevelArray(arrText)
+    If IsEmpty(elems) Then
+        ParseJsonArray = Array()
+        Exit Function
+    End If
+    ReDim out(0 To UBound(elems))
+    For i = 0 To UBound(elems)
+        Dim t As String
+        t = Trim$(elems(i))
+        If Len(t) >= 2 And Left$(t, 1) = """" And Right$(t, 1) = """" Then
+            Dim p As Long: p = 1
+            out(i) = Json_ParseString(t, p)
+        ElseIf IsNumeric(t) Then
+            out(i) = CDbl(t)
+        Else
+            out(i) = t ' boolean/null or literal retained
+        End If
+    Next i
+    ParseJsonArray = out
+End Function
+
+Sub ParseSeries(ByVal seriesText As String, ByRef names() As String, ByRef data() As Variant)
+    Dim items As Variant
+    Dim i As Long
+    items = Json_SplitTopLevelArray(seriesText)
+    If IsEmpty(items) Then Exit Sub
+    ReDim names(0 To UBound(items))
+    ReDim data(0 To UBound(items))
+    For i = 0 To UBound(items)
+        Dim obj As String
+        obj = items(i)
+        If Left$(obj, 1) <> "{" Then obj = "{" & obj
+        If Right$(obj, 1) <> "}" Then obj = obj & "}"
+        names(i) = JsonValue(obj, "name")
+        data(i) = ParseJsonArray(JsonValue(obj, "data"))
+    Next i
+End Sub
+
+Function ParseRowArray(ByVal rowsText As String) As Variant
+    Dim rows As Variant, i As Long, out() As Variant
+    rows = Json_SplitTopLevelArray(rowsText)
+    If IsEmpty(rows) Then
+        ParseRowArray = Array()
+        Exit Function
+    End If
+    ReDim out(0 To UBound(rows))
+    For i = 0 To UBound(rows)
+        Dim rowStr As String
+        rowStr = rows(i)
+        If Left$(rowStr, 1) <> "[" Then rowStr = "[" & rowStr
+        If Right$(rowStr, 1) <> "]" Then rowStr = rowStr & "]"
+        out(i) = ParseJsonArray(rowStr)
+    Next i
+    ParseRowArray = out
+End Function
+
 ' Create chart at placeholder location (macOS-safe)
 Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As String)
     On Error Resume Next
@@ -221,6 +547,7 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
     Dim chartObj As Object
     Dim l As Single, t As Single, w As Single, h As Single
     Dim chartType As Long
+    Dim chartTypeStr As String
 
     ' Get placeholder dimensions
     l = placeholder.Left
@@ -231,93 +558,81 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
     ' Delete placeholder
     placeholder.Delete
 
-    ' Determine chart type from spec (default to column)
-    chartType = xlColumnClustered
-    If InStr(chartSpec, """line""") > 0 Then chartType = xlLine
-    If InStr(chartSpec, """bar""") > 0 Then chartType = xlBarClustered
-    If InStr(chartSpec, """pie""") > 0 Then chartType = xlPie
-    If InStr(chartSpec, """area""") > 0 Then chartType = xlArea
-    If InStr(chartSpec, """scatter""") > 0 Then chartType = xlXYScatter
+    ' Determine chart type from spec
+    chartTypeStr = LCase(JsonValue(chartSpec, "type"))
+    Select Case chartTypeStr
+        Case "line": chartType = xlLine
+        Case "bar": chartType = xlBarClustered
+        Case "pie": chartType = xlPie
+        Case "area": chartType = xlArea
+        Case "scatter": chartType = xlXYScatter
+        Case Else
+            LogError "E1009", "Unsupported chart type '" & chartTypeStr & "' - defaulting to column"
+            chartType = xlColumnClustered
+    End Select
 
-    ' Create chart using AddChart (macOS compatible)
+    ' Create chart
     Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
-
     If chartShape Is Nothing Then
-        MsgBox "Failed to create chart", vbCritical
+        LogError "E1003", "Failed to create chart shape"
         Exit Sub
     End If
-
-    ' Access chart object
     Set chartObj = chartShape.Chart
 
-    ' Populate chart based on the spec
-    ' For extensibility, look for specific data patterns
-    If InStr(chartSpec, "WAU") > 0 Or InStr(chartSpec, "Week 1") > 0 Then
-        ' North Star Metrics or any weekly data chart
-        PopulateWeeklyMetricsChart chartObj, chartSpec
-    ElseIf InStr(chartSpec, "series") > 0 Then
-        ' Generic multi-series chart
-        PopulateGenericChart chartObj, chartSpec
-    Else
-        ' Fallback sample data
-        With chartObj.ChartData
-            .Activate
-            .Workbook.Worksheets(1).Range("A1").Value = "Category"
-            .Workbook.Worksheets(1).Range("B1").Value = "Value"
-            .Workbook.Worksheets(1).Range("A2").Value = "Item 1"
-            .Workbook.Worksheets(1).Range("B2").Value = 10
-            .Workbook.Close
-        End With
+    Dim xVals As Variant
+    Dim seriesNames() As String
+    Dim seriesData() As Variant
+    Dim dataObj As String
+    dataObj = JsonValue(chartSpec, "data")
+    If Len(dataObj) = 0 Then
+        LogError "E1005", "Chart missing 'data' object"
+        Exit Sub
     End If
+    If Not JsonHasKey(dataObj, "x") Then
+        LogError "E1005", "Chart data missing 'x' categories"
+        Exit Sub
+    End If
+    If Not JsonHasKey(dataObj, "series") Then
+        LogError "E1005", "Chart data missing 'series'"
+        Exit Sub
+    End If
+    xVals = ParseJsonArray(JsonValue(dataObj, "x"))
+    ParseSeries JsonValue(dataObj, "series"), seriesNames, seriesData
 
-    On Error GoTo 0
-End Sub
-
-' Populate weekly metrics chart with actual data
-Sub PopulateWeeklyMetricsChart(chartObj As Object, chartSpec As String)
     With chartObj.ChartData
         .Activate
         Dim ws As Object
+        Set ws = Nothing
         Set ws = .Workbook.Worksheets(1)
-
-        ' Clear existing data
+        If ws Is Nothing Then
+            LogError "E1011", "Chart data workbook not available (ChartData.Workbook)"
+            Exit Sub
+        End If
         ws.Cells.Clear
 
-        ' Set up headers
-        ws.Range("A1").Value = "Week"
-        ws.Range("B1").Value = "WAU"
-        ws.Range("C1").Value = "Median Latency (s)"
+        Dim i As Long, j As Long
+        ws.Cells(1, 1).Value = "Category"
+        For i = 0 To UBound(seriesNames)
+            ws.Cells(1, i + 2).Value = seriesNames(i)
+        Next i
 
-        ' Add x-axis labels
-        ws.Range("A2:A7").Value = Application.Transpose(Array("Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6"))
+        For j = 0 To UBound(xVals)
+            ws.Cells(j + 2, 1).Value = xVals(j)
+            For i = 0 To UBound(seriesNames)
+                ws.Cells(j + 2, i + 2).Value = seriesData(i)(j)
+            Next i
+        Next j
 
-        ' Add WAU data
-        ws.Range("B2:B7").Value = Application.Transpose(Array(200, 380, 520, 780, 1100, 1400))
-
-        ' Add Latency data
-        ws.Range("C2:C7").Value = Application.Transpose(Array(3.2, 2.8, 2.4, 2.1, 1.9, 1.7))
-
-        ' Set the data range
-        chartObj.SetSourceData Source:=ws.Range("A1:C7")
-
+        On Error Resume Next
+        chartObj.SetSourceData Source:=ws.Range(ws.Cells(1, 1), ws.Cells(UBound(xVals) + 2, UBound(seriesNames) + 2))
+        If Err.Number <> 0 Then
+            LogError "E1011", "Failed to set chart source data: " & Err.Description
+            Err.Clear
+        End If
         .Workbook.Close
     End With
 
-    ' Set chart title
-    chartObj.HasTitle = True
-    chartObj.ChartTitle.Text = "Metrics Trend"
-End Sub
-
-' Populate generic chart
-Sub PopulateGenericChart(chartObj As Object, chartSpec As String)
-    With chartObj.ChartData
-        .Activate
-        .Workbook.Worksheets(1).Range("A1").Value = "Category"
-        .Workbook.Worksheets(1).Range("B1").Value = "Series 1"
-        .Workbook.Worksheets(1).Range("A2:A4").Value = Application.Transpose(Array("Q1", "Q2", "Q3"))
-        .Workbook.Worksheets(1).Range("B2:B4").Value = Application.Transpose(Array(25, 35, 45))
-        .Workbook.Close
-    End With
+    On Error GoTo 0
 End Sub
 
 ' Create table at placeholder location
@@ -326,7 +641,7 @@ Sub CreateTableAtPlaceholder(sld As Slide, placeholder As Shape, tableSpec As St
     Dim tblShape As Shape
     Dim tbl As Table
     Dim l As Single, t As Single, w As Single, h As Single
-    Dim rows As Long, cols As Long
+    Dim headers As Variant, rows As Variant
     Dim r As Long, c As Long
 
     ' Get placeholder dimensions
@@ -338,17 +653,33 @@ Sub CreateTableAtPlaceholder(sld As Slide, placeholder As Shape, tableSpec As St
     ' Delete placeholder
     placeholder.Delete
 
-    ' Parse table spec (simplified - in production, parse JSON)
-    rows = 3
-    cols = 2
+    ' Parse table spec
+    If Not JsonHasKey(tableSpec, "headers") Then
+        LogError "E1005", "Table missing 'headers'"
+        Exit Sub
+    End If
+    If Not JsonHasKey(tableSpec, "rows") Then
+        LogError "E1005", "Table missing 'rows'"
+        Exit Sub
+    End If
+    headers = ParseJsonArray(JsonValue(tableSpec, "headers"))
+    rows = ParseRowArray(JsonValue(tableSpec, "rows"))
 
-    ' Create table
-    Set tblShape = sld.Shapes.AddTable(rows, cols, l, t, w, h)
+    ' Create table with header row
+    Set tblShape = sld.Shapes.AddTable(UBound(rows) + 2, UBound(headers) + 1, l, t, w, h)
     Set tbl = tblShape.Table
 
-    ' Add sample data
-    tbl.Cell(1, 1).Shape.TextFrame.TextRange.text = "Header 1"
-    tbl.Cell(1, 2).Shape.TextFrame.TextRange.text = "Header 2"
+    ' Populate headers
+    For c = 0 To UBound(headers)
+        tbl.Cell(1, c + 1).Shape.TextFrame.TextRange.text = headers(c)
+    Next c
+
+    ' Populate rows
+    For r = 0 To UBound(rows)
+        For c = 0 To UBound(headers)
+            tbl.Cell(r + 2, c + 1).Shape.TextFrame.TextRange.text = rows(r)(c)
+        Next c
+    Next r
 
     On Error GoTo 0
 End Sub
@@ -361,10 +692,12 @@ End Sub
 
 Sub Main()
     On Error GoTo ErrorHandler
+    InitErrorLog
 
     ' Validate environment
     If Application.Presentations.Count = 0 Then
-        MsgBox "Please open a PowerPoint presentation first.", vbExclamation
+        LogError "E1007", "No active presentation open"
+        ShowErrors
         Exit Sub
     End If
 
@@ -381,385 +714,92 @@ Sub Main()
     ' Pre-cache layouts for performance
     Dim layoutIndex As Variant
     Dim requiredLayouts As Variant
-    requiredLayouts = Array(6, 8, 13, 21, 25, 38, 54, 56, 58, 59)
+    requiredLayouts = Array(1, 2, 4)
 
     For Each layoutIndex In requiredLayouts
         If Not CacheHas(CLng(layoutIndex)) Then
             Set cl = GetCustomLayoutByIndexSafe(CLng(layoutIndex))
             If cl Is Nothing Then
-                MsgBox "Layout index " & layoutIndex & " not found in template. Check that you have the correct template open.", vbCritical
-                Exit Sub
+                LogError "E1008", "Layout index " & layoutIndex & " not found in template"
+            Else
+                CachePut CLng(layoutIndex), cl
             End If
-            CachePut CLng(layoutIndex), cl
         End If
     Next layoutIndex
 
     ' Create slides
-    ' ---- Slide 1: Demo Deck ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(58))
+    ' ---- Slide 1: Test Presentation ----
+    Set currentSlide = AddSlideWithLayout(CacheGet(1))
 
     ' CenterTitle placeholder (ordinal 0)
     Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 3, 0)
     If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 1:" & vbCrLf & _
-               "Type: CenterTitle (type_id=3)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
+        LogError "E1002", "Slide 1: Missing placeholder Type=CenterTitle (type_id=3), Ordinal=0"
+    Else
+        SafeSetText shp, "Welcome to the Test"
     End If
-    SafeSetText shp, "Building a Modern Data Product"
 
     ' Subtitle placeholder (ordinal 0)
     Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 4, 0)
     If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 1:" & vbCrLf & _
-               "Type: Subtitle (type_id=4)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
+        LogError "E1002", "Slide 1: Missing placeholder Type=Subtitle (type_id=4), Ordinal=0"
+    Else
+        SafeSetText shp, "A Simple Example"
     End If
-    SafeSetText shp, "From concept to launch in 6 weeks"
-
-    
-    ' Image placeholder skipped: assets/logo.png
-    ' User will add image manually after slides are created
 
     ' ---- Slide 2: Agenda ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(6))
+    Set currentSlide = AddSlideWithLayout(CacheGet(2))
 
     ' Title placeholder (ordinal 0)
     Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
     If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 2:" & vbCrLf & _
-               "Type: Title (type_id=1)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
+        LogError "E1002", "Slide 2: Missing placeholder Type=Title (type_id=1), Ordinal=0"
+    Else
+        SafeSetText shp, "Agenda"
     End If
-    SafeSetText shp, "Agenda"
 
     ' Body placeholder (ordinal 0)
     Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
     If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 2:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
+        LogError "E1002", "Slide 2: Missing placeholder Type=Body (type_id=2), Ordinal=0"
+    Else
+        SafeSetText shp, "• Introduction" & vbCrLf & "• Main Content" & vbCrLf & "• Conclusion"
     End If
-    SafeSetText shp, "- Vision and goals" & vbCrLf & "- Users and use cases" & vbCrLf & "- Architecture overview" & vbCrLf & "- Prototype demo" & vbCrLf & "- Metrics & timeline"
+
+    ' ---- Slide 3: Comparison ----
+    Set currentSlide = AddSlideWithLayout(CacheGet(4))
+
+    ' Title placeholder (ordinal 0)
+    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
+    If shp Is Nothing Then
+        LogError "E1002", "Slide 3: Missing placeholder Type=Title (type_id=1), Ordinal=0"
+    Else
+        SafeSetText shp, "Comparison"
+    End If
+
+    ' Body placeholder (ordinal 0)
+    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
+    If shp Is Nothing Then
+        LogError "E1002", "Slide 3: Missing placeholder Type=Body (type_id=2), Ordinal=0"
+    Else
+        SafeSetText shp, "Left Side:" & vbCrLf & "• Point 1" & vbCrLf & "• Point 2"
+    End If
 
     ' Body placeholder (ordinal 1)
     Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 1)
     If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 2:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 1" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
+        LogError "E1002", "Slide 3: Missing placeholder Type=Body (type_id=2), Ordinal=1"
+    Else
+        SafeSetText shp, "Right Side:" & vbCrLf & "• Point A" & vbCrLf & "• Point B"
     End If
-    SafeSetText shp, "- Risks & mitigations" & vbCrLf & "- Team & roles" & vbCrLf & "- Budget overview" & vbCrLf & "- Q&A"
 
-    ' ---- Slide 3: Vision ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(13))
 
-    ' Title placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 3:" & vbCrLf & _
-               "Type: Title (type_id=1)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
+    ' Report outcome
+    If ErrorsCount() > 0 Then
+        ShowErrors
+    Else
+        MsgBox "Successfully created 3 slides!", vbInformation
     End If
-    SafeSetText shp, "Vision"
-
-    ' Body placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 3:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Deliver self-serve analytics to 3,000+ internal users with sub-2s query latency and governed data access."
-
-    
-    ' Image placeholder skipped: images/hero-dashboard.jpg
-    ' User will add image manually after slides are created
-
-    ' ---- Slide 4: Key Personas ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(21))
-    
-    ' Debug: List placeholders on slide 4 (layout 21)
-    DebugListPlaceholders currentSlide
-
-    ' Title placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 4:" & vbCrLf & _
-               "Type: Title (type_id=1)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Key Personas"
-
-    ' Body placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 4:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "**Analyst**" & vbCrLf & "- Ad-hoc exploration" & vbCrLf & "- SQL power-user" & vbCrLf & "- Needs versioned datasets"
-
-    ' Body placeholder (ordinal 1)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 1)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 4:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 1" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "**Manager**" & vbCrLf & "- Weekly KPIs" & vbCrLf & "- Email/PDF exports" & vbCrLf & "- SLA: 9 am Monday"
-
-    
-    ' Image placeholder skipped: images/persona-analyst.png
-    ' User will add image manually after slides are created
-
-    
-    ' Image placeholder skipped: images/persona-manager.png
-    ' User will add image manually after slides are created
-
-    ' ---- Slide 5: North Star Metrics ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(59))
-
-    ' Title placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 5:" & vbCrLf & _
-               "Type: Title (type_id=1)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "North Star Metrics"
-
-    ' Body placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 5:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "- Weekly Active Users (WAU)" & vbCrLf & "- Median query latency (s)" & vbCrLf & "- Dashboard share rate (%)" & vbCrLf & "- Data freshness (hrs)"
-
-    ' Chart placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 8, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 5:" & vbCrLf & _
-               "Type: Chart (type_id=8)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    CreateChartAtPlaceholder currentSlide, shp, "{""type"": ""line"", ""data"": {""x"": [""Week 1"", ""Week 2"", ""Week 3"", ""Week 4"", ""Week 5"", ""Week 6""], ""series"": [{""name"": ""WAU"", ""data"": [200, 380, 520, 780, 1100, 1400]}, {""name"": ""Median Latency (s)"", ""data"": [3.2, 2.8, 2.4, 2.1, 1.9, 1.7]}]}}"
-
-    ' ---- Slide 6: High-Level Architecture ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(25))
-
-    ' Title placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 6:" & vbCrLf & _
-               "Type: Title (type_id=1)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "High-Level Architecture"
-
-    ' Body placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 6:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "- Ingest: CDC + batch (Kafka, Airflow)" & vbCrLf & "- Lakehouse: Parquet + Delta" & vbCrLf & "- Query: DuckDB + Presto" & vbCrLf & "- Serving: REST + BI" & vbCrLf & "- AuthZ: OPA + Column-masking"
-
-    
-    ' Image placeholder skipped: images/arch-overview.png
-    ' User will add image manually after slides are created
-
-    ' ---- Slide 7: Data Contracts Snapshot ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(8))
-
-    ' Title placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 7:" & vbCrLf & _
-               "Type: Title (type_id=1)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Data Contracts Snapshot"
-
-    ' Body placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 7:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "**Orders v2**" & vbCrLf & "- PII tags: none" & vbCrLf & "- SLA: 15 min" & vbCrLf & "- Owner: Sales Eng"
-
-    ' Body placeholder (ordinal 1)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 1)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 7:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 1" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "**Customers v1**" & vbCrLf & "- PII tags: email" & vbCrLf & "- SLA: hourly" & vbCrLf & "- Owner: CRM"
-
-    ' Body placeholder (ordinal 2)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 2)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 7:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 2" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "**Events v3**" & vbCrLf & "- PII tags: anon_id" & vbCrLf & "- SLA: near-real-time" & vbCrLf & "- Owner: Platform"
-
-    ' ---- Slide 8: Prototype Screens ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(38))
-
-    ' Title placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 8:" & vbCrLf & _
-               "Type: Title (type_id=1)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Prototype Screens"
-
-    
-    ' Image placeholder skipped: images/screen-explore.png
-    ' User will add image manually after slides are created
-
-    
-    ' Image placeholder skipped: images/screen-dashboard.png
-    ' User will add image manually after slides are created
-
-    
-    ' Image placeholder skipped: images/screen-share.png
-    ' User will add image manually after slides are created
-
-    ' Body placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 8:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Explore" & vbCrLf & "- Column profiler" & vbCrLf & "- Query hints"
-
-    ' Body placeholder (ordinal 1)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 1)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 8:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 1" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Dashboard" & vbCrLf & "- Filters" & vbCrLf & "- Cohorts"
-
-    ' Body placeholder (ordinal 2)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 2)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 8:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 2" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Share" & vbCrLf & "- Links & embeds" & vbCrLf & "- Expiring tokens"
-
-    ' ---- Slide 9: Risks & Mitigations ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(56))
-
-    ' Title placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 9:" & vbCrLf & _
-               "Type: Title (type_id=1)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Risks & Mitigations"
-
-    ' Body placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 9:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "- Data freshness SLAs might slip → Add backfill monitors and retry budgets" & vbCrLf & "- Governance gaps → Enforce policy-as-code and lineage checks in CI" & vbCrLf & "- Cost overruns → Right-size clusters, auto-suspend idle, tiered storage" & vbCrLf & "- Adoption lag → Champions program, office hours, template gallery"
-
-    ' ---- Slide 10: Thank You ----
-    Set currentSlide = AddSlideWithLayout(CacheGet(54))
-
-    ' Title placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 1, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 10:" & vbCrLf & _
-               "Type: Title (type_id=1)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Thank You"
-
-    ' Body placeholder (ordinal 0)
-    Set shp = GetPlaceholderByTypeAndOrdinal(currentSlide, 2, 0)
-    If shp Is Nothing Then
-        MsgBox "STRICT MATCH ERROR: Missing required placeholder on slide 10:" & vbCrLf & _
-               "Type: Body (type_id=2)" & vbCrLf & _
-               "Ordinal: 0" & vbCrLf & vbCrLf & _
-               "This placeholder is required but not found in the layout.", vbCritical, "Missing Placeholder"
-        Exit Sub
-    End If
-    SafeSetText shp, "Contact" & vbCrLf & "- Product: product@company.com" & vbCrLf & "- Slack: #data-product" & vbCrLf & "- Docs: https://docs.company.com/data-product"
-
-
-    ' Success message
-    MsgBox "Successfully created 10 slides!", vbInformation
     Exit Sub
 
 ErrorHandler:
@@ -789,7 +829,7 @@ Sub ValidateTemplate()
     Dim layoutIndex As Variant
     Dim found As Boolean
 
-    requiredLayouts = Array(6, 8, 13, 21, 25, 38, 54, 56, 58, 59)
+    requiredLayouts = Array(1, 2, 4)
 
     msg = msg & "Required Layout Indices:" & vbCrLf
     For Each layoutIndex In requiredLayouts
