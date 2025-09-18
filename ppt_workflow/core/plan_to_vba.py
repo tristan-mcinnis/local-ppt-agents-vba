@@ -756,14 +756,31 @@ Sub CreateChartAtPlaceholder(sld As Object, placeholder As Object, chartSpec As 
     EnsureSlideActive sld
     DoEvents
 
-    ' Remove the placeholder and rely on shape APIs (InsertChart is unreliable on Mac)
+    ' Try InsertChart on placeholder first (works better on some Mac versions)
     On Error Resume Next
-    placeholder.Delete
+    If placeholder.PlaceholderFormat.Type = ppPlaceholderChart Or _
+       placeholder.PlaceholderFormat.Type = ppPlaceholderObject Then
+        Err.Clear
+        Set chartShape = placeholder.InsertChart2(-1, chartType)
+        If Err.Number = 0 And Not chartShape Is Nothing Then
+            created = True
+        Else
+            ' Try legacy InsertChart
+            Err.Clear
+            Set chartShape = placeholder.InsertChart(chartType)
+            If Err.Number = 0 And Not chartShape Is Nothing Then created = True
+        End If
+    End If
+
+    ' If InsertChart failed, delete placeholder and try AddChart
+    If Not created Then
+        placeholder.Delete
+    End If
     On Error GoTo 0
     On Error Resume Next
 
-    ' Legacy AddChart first if hinted
-    If preferLegacy Then
+    ' Legacy AddChart if hinted or InsertChart failed
+    If Not created And preferLegacy Then
         Err.Clear
         Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
         If Err.Number = 0 And Not chartShape Is Nothing Then created = True
@@ -851,16 +868,34 @@ Sub CreateChartAtPlaceholder(sld As Object, placeholder As Object, chartSpec As 
     chartShape.Height = h
     Set chartObj = chartShape.Chart
 
-    With chartObj.ChartData
-        .Activate
-        Dim ws As Object
-        Set ws = Nothing
-        Set ws = .Workbook.Worksheets(1)
-        If ws Is Nothing Then
-            LogError "E1011", "Chart data workbook not available (ChartData.Workbook)"
-            Exit Sub
-        End If
-        ws.Cells.Clear
+    ' Try to populate chart data (may fail on Mac)
+    On Error Resume Next
+    Dim dataActivated As Boolean
+    dataActivated = False
+
+    ' Try to activate chart data
+    chartObj.ChartData.Activate
+    If Err.Number = 0 Then
+        dataActivated = True
+    Else
+        ' Try alternative activation method
+        Err.Clear
+        chartObj.Activate
+        DoEvents
+        chartObj.ChartData.Activate
+        If Err.Number = 0 Then dataActivated = True
+    End If
+
+    If dataActivated Then
+        With chartObj.ChartData
+            Dim ws As Object
+            Set ws = Nothing
+            Set ws = .Workbook.Worksheets(1)
+            If ws Is Nothing Then
+                LogError "E1011", "Chart data workbook not available (ChartData.Workbook)"
+                Exit Sub
+            End If
+            ws.Cells.Clear
 
         Dim i As Long, j As Long
         ws.Cells(1, 1).Value = "Category"
@@ -876,13 +911,17 @@ Sub CreateChartAtPlaceholder(sld As Object, placeholder As Object, chartSpec As 
         Next j
 
         On Error Resume Next
-        chartObj.SetSourceData Source:=ws.Range(ws.Cells(1, 1), ws.Cells(UBound(xVals) + 2, UBound(seriesNames) + 2))
-        If Err.Number <> 0 Then
-            LogError "E1011", "Failed to set chart source data: " & Err.Description
-            Err.Clear
-        End If
-        .Workbook.Close
-    End With
+            chartObj.SetSourceData Source:=ws.Range(ws.Cells(1, 1), ws.Cells(UBound(xVals) + 2, UBound(seriesNames) + 2))
+            If Err.Number <> 0 Then
+                LogError "E1011", "Failed to set chart source data: " & Err.Description
+                Err.Clear
+            End If
+            .Workbook.Close
+        End With
+    Else
+        ' Chart data couldn't be activated - log warning but keep the chart
+        LogWarning "W1004", "Chart created but data couldn't be populated (Mac limitation)"
+    End If
 
     On Error GoTo 0
 End Sub
