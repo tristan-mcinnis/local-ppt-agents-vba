@@ -49,15 +49,15 @@ class PlanToVBAConverter:
         template_name = self.plan["meta"]["template_name"]
 
         return f"""' ================================================================
-' AUTO-GENERATED POWERPOINT VBA SCRIPT
+' AUTO-GENERATED POWERPOINT VBA SCRIPT FOR MAC
 ' Generated: {now}
 ' Template: {template_name}
-' Platform: macOS and Windows compatible
+' Platform: macOS PowerPoint
 ' ================================================================
 '
 ' USAGE:
 '   1. Open your PowerPoint template
-'   2. Press Alt+F11 (Windows) or Opt+F11 (Mac) to open VBA editor
+'   2. Press Opt+F11 to open VBA editor
 '   3. Insert > Module
 '   4. Paste this entire script
 '   5. Run the "Main" subroutine
@@ -100,14 +100,15 @@ Const xlXYScatter As Long = -4169
 ' HELPER FUNCTIONS
 ' ================================================================
 
-' Module-level cache for layouts (macOS-safe Collection instead of Scripting.Dictionary)
+' Module-level cache for layouts (Collection for Mac)
 Dim layoutCache As Collection
 Dim errorLog As Collection
+Dim warningLog As Collection
 
-' Check if layout cache has a key (macOS-safe)
+' Check if layout cache has a key
 Private Function CacheHas(key As Long) As Boolean
     On Error GoTo NotFound
-    Dim tmp As CustomLayout
+    Dim tmp As Object
     Set tmp = layoutCache(CStr(key))
     CacheHas = True
     Exit Function
@@ -115,8 +116,8 @@ NotFound:
     CacheHas = False
 End Function
 
-' Add layout to cache (macOS-safe)
-Private Sub CachePut(key As Long, cl As CustomLayout)
+' Add layout to cache
+Private Sub CachePut(key As Long, cl As Object)
     On Error Resume Next
     ' Remove if exists
     layoutCache.Remove CStr(key)
@@ -124,23 +125,23 @@ Private Sub CachePut(key As Long, cl As CustomLayout)
     layoutCache.Add cl, CStr(key)
 End Sub
 
-' Get layout from cache (macOS-safe)
-Private Function CacheGet(key As Long) As CustomLayout
+' Get layout from cache
+Private Function CacheGet(key As Long) As Object
     On Error Resume Next
     Set CacheGet = layoutCache(CStr(key))
     On Error GoTo 0
 End Function
 
-' Get custom layout by index - IMPROVED VERSION
-' Matches the analyzer logic: index is position within SlideMaster.CustomLayouts
-Function GetCustomLayoutByIndexSafe(layoutIndex As Long) As CustomLayout
+' Get custom layout by index with fallback mechanism
+Function GetCustomLayoutByIndexSafe(layoutIndex As Long) As Object
     On Error Resume Next
-    Dim pres As Presentation
-    Dim design As design
+    Dim pres As Object
+    Dim design As Object
+    Dim fallbackLayout As Object
 
     Set pres = Application.ActivePresentation
 
-    ' First try: Direct index from the active SlideMaster (most common case)
+    ' First try: Direct index from the active SlideMaster
     If layoutIndex >= 1 And layoutIndex <= pres.SlideMaster.CustomLayouts.Count Then
         Set GetCustomLayoutByIndexSafe = pres.SlideMaster.CustomLayouts(layoutIndex)
         If Not GetCustomLayoutByIndexSafe Is Nothing Then
@@ -148,7 +149,7 @@ Function GetCustomLayoutByIndexSafe(layoutIndex As Long) As CustomLayout
         End If
     End If
 
-    ' Second try: Check each Design's SlideMaster (for multi-design templates)
+    ' Second try: Check each Design's SlideMaster
     For Each design In pres.Designs
         If layoutIndex >= 1 And layoutIndex <= design.SlideMaster.CustomLayouts.Count Then
             Set GetCustomLayoutByIndexSafe = design.SlideMaster.CustomLayouts(layoutIndex)
@@ -158,22 +159,65 @@ Function GetCustomLayoutByIndexSafe(layoutIndex As Long) As CustomLayout
         End If
     Next design
 
-    ' Return Nothing if not found
-    Set GetCustomLayoutByIndexSafe = Nothing
+    ' Fallback: Try to find a similar layout by name pattern
+    ' This helps when layout indices shift
+    If layoutIndex = 2 Then ' Title Slide
+        Set fallbackLayout = FindLayoutByNamePattern("Title")
+    ElseIf layoutIndex >= 3 And layoutIndex <= 6 Then ' Content layouts
+        Set fallbackLayout = FindLayoutByNamePattern("Content")
+    End If
+
+    If Not fallbackLayout Is Nothing Then
+        Set GetCustomLayoutByIndexSafe = fallbackLayout
+        LogError "W1001", "Layout index " & layoutIndex & " not found, using fallback: " & fallbackLayout.Name
+    Else
+        Set GetCustomLayoutByIndexSafe = Nothing
+    End If
+
+    On Error GoTo 0
+End Function
+
+' Find layout by name pattern (fallback mechanism)
+Function FindLayoutByNamePattern(pattern As String) As Object
+    On Error Resume Next
+    Dim pres As Object
+    Dim layout As Object
+
+    Set pres = Application.ActivePresentation
+
+    For Each layout In pres.SlideMaster.CustomLayouts
+        If InStr(1, layout.Name, pattern, vbTextCompare) > 0 Then
+            Set FindLayoutByNamePattern = layout
+            Exit Function
+        End If
+    Next layout
+
+    Set FindLayoutByNamePattern = Nothing
     On Error GoTo 0
 End Function
 
 ' Add slide with specified layout
-Function AddSlideWithLayout(layout As CustomLayout) As Slide
-    Dim pres As Presentation
+Function AddSlideWithLayout(layout As Object) As Object
+    Dim pres As Object
     Set pres = Application.ActivePresentation
     Set AddSlideWithLayout = pres.Slides.AddSlide(pres.Slides.Count + 1, layout)
 End Function
 
-' Get placeholder by type and ordinal (0-based)
-Function GetPlaceholderByTypeAndOrdinal(sld As Slide, typeId As Long, ordinal As Long) As Shape
+' Ensure slide is active before operations (important for Mac chart APIs)
+Private Sub EnsureSlideActive(sld As Object)
     On Error Resume Next
-    Dim shp As Shape
+    If Not Application.ActiveWindow Is Nothing Then
+        Application.ActiveWindow.View.GotoSlide sld.SlideIndex
+    ElseIf Application.SlideShowWindows.Count > 0 Then
+        Application.SlideShowWindows(1).View.GotoSlide sld.SlideIndex
+    End If
+    On Error GoTo 0
+End Sub
+
+' Get placeholder by type and ordinal (0-based)
+Function GetPlaceholderByTypeAndOrdinal(sld As Object, typeId As Long, ordinal As Long) As Object
+    On Error Resume Next
+    Dim shp As Object
     Dim candidates As Collection
     Dim i As Long
 
@@ -202,41 +246,48 @@ Function GetPlaceholderByTypeAndOrdinal(sld As Slide, typeId As Long, ordinal As
     On Error GoTo 0
 End Function
 
-' Sort shapes by position (top, then left)
+' Sort shapes by position using array-based approach (more stable on Mac)
 Function SortShapesByPosition(shapes As Collection) As Collection
+    If shapes.Count <= 1 Then
+        Set SortShapesByPosition = shapes
+        Exit Function
+    End If
+
     Dim sorted As Collection
-    Dim shp As Shape
+    Dim shpArray() As Object
     Dim i As Long, j As Long
-    Dim tempShp As Shape
+    Dim tempShp As Object
 
-    Set sorted = New Collection
+    ' Convert collection to array for more reliable sorting
+    ReDim shpArray(1 To shapes.Count)
+    For i = 1 To shapes.Count
+        Set shpArray(i) = shapes(i)
+    Next i
 
-    ' Copy to sorted collection
-    For Each shp In shapes
-        sorted.Add shp
-    Next shp
-
-    ' Simple bubble sort
-    For i = 1 To sorted.Count - 1
-        For j = i + 1 To sorted.Count
-            If sorted(i).Top > sorted(j).Top Or _
-               (sorted(i).Top = sorted(j).Top And sorted(i).Left > sorted(j).Left) Then
-                ' Swap
-                Set tempShp = sorted(i)
-                sorted.Remove i
-                sorted.Add tempShp, , , i
-                Set tempShp = sorted(j)
-                sorted.Remove j
-                sorted.Add tempShp, , , j - 1
+    ' Bubble sort on array
+    For i = 1 To UBound(shpArray) - 1
+        For j = i + 1 To UBound(shpArray)
+            If shpArray(i).Top > shpArray(j).Top Or _
+               (Abs(shpArray(i).Top - shpArray(j).Top) < 5 And shpArray(i).Left > shpArray(j).Left) Then
+                ' Swap (with 5-pixel tolerance for top alignment)
+                Set tempShp = shpArray(i)
+                Set shpArray(i) = shpArray(j)
+                Set shpArray(j) = tempShp
             End If
         Next j
+    Next i
+
+    ' Convert back to collection
+    Set sorted = New Collection
+    For i = 1 To UBound(shpArray)
+        sorted.Add shpArray(i)
     Next i
 
     Set SortShapesByPosition = sorted
 End Function
 
-' Set text with TextFrame2 fallback for compatibility
-Sub SafeSetText(shp As Shape, text As String)
+' Set text with TextFrame2 fallback
+Sub SafeSetText(shp As Object, text As String)
     On Error Resume Next
 
     ' Try TextFrame2 first (newer PowerPoint)
@@ -256,8 +307,8 @@ Sub SafeSetText(shp As Shape, text As String)
 End Sub
 
 ' Debug helper to list placeholders on a slide
-Sub DebugListPlaceholders(s As Slide)
-    Dim sh As Shape
+Sub DebugListPlaceholders(s As Object)
+    Dim sh As Object
     Debug.Print "=== Placeholders on slide " & s.SlideIndex & " ==="
     For Each sh In s.Shapes
         If sh.Type = msoPlaceholder Then
@@ -271,6 +322,7 @@ End Sub
 ' ----- Error Logging Helpers -----
 Sub InitErrorLog()
     Set errorLog = New Collection
+    Set warningLog = New Collection
 End Sub
 
 Sub LogError(code As String, details As String)
@@ -280,11 +332,26 @@ Sub LogError(code As String, details As String)
     On Error GoTo 0
 End Sub
 
+Sub LogWarning(code As String, details As String)
+    On Error Resume Next
+    If warningLog Is Nothing Then Set warningLog = New Collection
+    warningLog.Add code & ": " & details
+    On Error GoTo 0
+End Sub
+
 Function ErrorsCount() As Long
     If errorLog Is Nothing Then
         ErrorsCount = 0
     Else
         ErrorsCount = errorLog.Count
+    End If
+End Function
+
+Function WarningsCount() As Long
+    If warningLog Is Nothing Then
+        WarningsCount = 0
+    Else
+        WarningsCount = warningLog.Count
     End If
 End Function
 
@@ -301,6 +368,21 @@ Sub ShowErrors()
         End If
     Next i
     MsgBox msg, vbExclamation, "PowerPoint Script Issues"
+End Sub
+
+Sub ShowWarnings()
+    If warningLog Is Nothing Or warningLog.Count = 0 Then Exit Sub
+    Dim i As Long
+    Dim msg As String
+    msg = "Completed with " & warningLog.Count & " warning(s):" & vbCrLf & vbCrLf
+    For i = 1 To warningLog.Count
+        msg = msg & "- " & warningLog(i) & vbCrLf
+        If i >= 12 Then
+            msg = msg & "... (more omitted)" & vbCrLf
+            Exit For
+        End If
+    Next i
+    MsgBox msg, vbInformation, "PowerPoint Script Warnings"
 End Sub
 
 ' ----- JSON Parsing Helpers (robust) -----
@@ -323,8 +405,8 @@ Private Function Json_ParseString(ByVal s As String, ByRef pos As Long) As Strin
         pos = pos + 1
         If esc Then
             Select Case ch
-                Case "\"": res = res & "\"
-                Case "\": res = res & "\"
+                Case "\"": res = res & "\""
+                Case "\\": res = res & "\\"
                 Case "/": res = res & "/"
                 Case "b": res = res & Chr$(8)
                 Case "f": res = res & Chr$(12)
@@ -349,7 +431,7 @@ Private Function Json_ParseString(ByVal s As String, ByRef pos As Long) As Strin
                     res = res & ch
             End Select
             esc = False
-        ElseIf ch = "\" Then
+        ElseIf ch = "\\\\" Then
             esc = True
         ElseIf ch = """" Then
             Exit Do
@@ -362,21 +444,21 @@ End Function
 
 Private Function Json_FindMatching(ByVal s As String, ByVal startPos As Long, _
                                    ByVal openCh As String, ByVal closeCh As String) As Long
-    Dim i As Long, depth As Long, ch As String, esc As Boolean, inStr As Boolean
+    Dim i As Long, depth As Long, ch As String, esc As Boolean, insideString As Boolean
     depth = 0
     For i = startPos To Len(s)
         ch = Mid$(s, i, 1)
-        If inStr Then
+        If insideString Then
             If esc Then
                 esc = False
-            ElseIf ch = "\" Then
+            ElseIf ch = "\\\\" Then
                 esc = True
             ElseIf ch = """" Then
-                inStr = False
+                insideString = False
             End If
         Else
             If ch = """" Then
-                inStr = True
+                insideString = True
             ElseIf ch = openCh Then
                 depth = depth + 1
             ElseIf ch = closeCh Then
@@ -393,27 +475,31 @@ End Function
 
 Private Function Json_FindKeyAtTopLevel(ByVal s As String, ByVal key As String) As Long
     ' Returns position of first character of value for key at top-level of object
-    Dim i As Long, ch As String, esc As Boolean, inStr As Boolean, depth As Long
-    Dim k As String, valPos As Long
+    Dim i As Long
+    Dim ch As String
+    Dim esc As Boolean
+    Dim insideString As Boolean
+    Dim depth As Long
+    Dim k As String
+    Dim c As String
+
     depth = 0
     i = 1
     Do While i <= Len(s)
         ch = Mid$(s, i, 1)
-        If inStr Then
+        If insideString Then
             If esc Then
                 esc = False
-            ElseIf ch = "\" Then
+            ElseIf ch = "\\\\" Then
                 esc = True
             ElseIf ch = """" Then
-                inStr = False
+                insideString = False
             End If
             i = i + 1
         Else
             Select Case ch
                 Case """"  ' start string (potential key)
                     If depth = 1 Then
-                        Dim savePos As Long
-                        savePos = i
                         k = Json_ParseString(s, i)
                         Json_SkipWs s, i
                         If i <= Len(s) And Mid$(s, i, 1) = ":" Then
@@ -424,7 +510,6 @@ Private Function Json_FindKeyAtTopLevel(ByVal s As String, ByVal key As String) 
                                 Exit Function
                             Else
                                 ' skip the value to continue scanning
-                                Dim c As String
                                 c = Mid$(s, i, 1)
                                 If c = """" Then
                                     Call Json_ParseString(s, i)
@@ -487,7 +572,7 @@ End Function
 Private Function Json_SplitTopLevelArray(ByVal arrText As String) As Variant
     Dim res() As String
     Dim n As Long, i As Long, ch As String, depth As Long
-    Dim inStr As Boolean, esc As Boolean, startEl As Long
+    Dim insideString As Boolean, esc As Boolean, startEl As Long
     If Len(arrText) < 2 Then
         Json_SplitTopLevelArray = Array()
         Exit Function
@@ -495,17 +580,17 @@ Private Function Json_SplitTopLevelArray(ByVal arrText As String) As Variant
     startEl = 2 ' after [
     For i = 2 To Len(arrText) - 1
         ch = Mid$(arrText, i, 1)
-        If inStr Then
+        If insideString Then
             If esc Then
                 esc = False
-            ElseIf ch = "\" Then
+            ElseIf ch = "\\\\" Then
                 esc = True
             ElseIf ch = """" Then
-                inStr = False
+                insideString = False
             End If
         Else
             Select Case ch
-                Case """" : inStr = True
+                Case """" : insideString = True
                 Case "[", "{" : depth = depth + 1
                 Case "]", "}" : depth = depth - 1
                 Case ","
@@ -571,7 +656,11 @@ Sub ParseSeries(ByVal seriesText As String, ByRef names() As String, ByRef data(
         If Left$(obj, 1) <> "{" Then obj = "{" & obj
         If Right$(obj, 1) <> "}" Then obj = obj & "}"
         names(i) = JsonValue(obj, "name")
-        data(i) = ParseJsonArray(JsonValue(obj, "data"))
+        ' Try "values" first (new format), then "data" (old format)
+        Dim vals As String
+        vals = JsonValue(obj, "values")
+        If Len(vals) = 0 Then vals = JsonValue(obj, "data")
+        data(i) = ParseJsonArray(vals)
     Next i
 End Sub
 
@@ -593,14 +682,28 @@ Function ParseRowArray(ByVal rowsText As String) As Variant
     ParseRowArray = out
 End Function
 
-' Create chart at placeholder location (macOS-safe)
-Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As String)
+' Create chart at placeholder location - Mac optimized
+Sub CreateChartAtPlaceholder(sld As Object, placeholder As Object, chartSpec As String)
     On Error Resume Next
-    Dim chartShape As Shape
+    Dim chartShape As Object
     Dim chartObj As Object
     Dim l As Single, t As Single, w As Single, h As Single
     Dim chartType As Long
     Dim chartTypeStr As String
+    Dim chartApiHint As String
+    Dim preferLegacy As Boolean
+    Dim styleCandidates As Variant
+    Dim layoutOptions As Variant
+    Dim styleIdx As Long
+    Dim layoutIdx As Long
+    Dim created As Boolean
+    Dim fallbackBox As Object
+    Dim xVals As Variant
+    Dim seriesNames() As String
+    Dim seriesData() As Variant
+    Dim dataObj As String
+    Dim hasCategories As Boolean
+    Dim catStr As String
 
     ' Get placeholder dimensions
     l = placeholder.Left
@@ -608,12 +711,13 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
     w = placeholder.Width
     h = placeholder.Height
 
-    ' Delete placeholder
-    placeholder.Delete
-
-    ' Determine chart type from spec
+    ' Determine chart type from spec and chart API hints
     chartTypeStr = LCase(JsonValue(chartSpec, "type"))
+    chartApiHint = LCase(JsonValue(chartSpec, "_chart_api"))
+    preferLegacy = (chartApiHint = "addchart" Or chartApiHint = "legacy")
+
     Select Case chartTypeStr
+        Case "column", "column_clustered", "clustered_column": chartType = xlColumnClustered
         Case "line": chartType = xlLine
         Case "bar": chartType = xlBarClustered
         Case "pie": chartType = xlPie
@@ -624,33 +728,128 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
             chartType = xlColumnClustered
     End Select
 
-    ' Create chart
-    Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
-    If chartShape Is Nothing Then
-        LogError "E1003", "Failed to create chart shape"
-        Exit Sub
-    End If
-    Set chartObj = chartShape.Chart
+    styleCandidates = Array(-1, 201, 0)
+    layoutOptions = Array(False, True)
+    created = False
 
-    Dim xVals As Variant
-    Dim seriesNames() As String
-    Dim seriesData() As Variant
-    Dim dataObj As String
+    ' Parse data up front so we can use it for chart or fallback table
     dataObj = JsonValue(chartSpec, "data")
     If Len(dataObj) = 0 Then
         LogError "E1005", "Chart missing 'data' object"
         Exit Sub
     End If
-    If Not JsonHasKey(dataObj, "x") Then
-        LogError "E1005", "Chart data missing 'x' categories"
+    hasCategories = JsonHasKey(dataObj, "categories") Or JsonHasKey(dataObj, "x")
+    If Not hasCategories Then
+        LogError "E1005", "Chart data missing 'categories' or 'x'"
         Exit Sub
     End If
     If Not JsonHasKey(dataObj, "series") Then
         LogError "E1005", "Chart data missing 'series'"
         Exit Sub
     End If
-    xVals = ParseJsonArray(JsonValue(dataObj, "x"))
+    catStr = JsonValue(dataObj, "categories")
+    If Len(catStr) = 0 Then catStr = JsonValue(dataObj, "x")
+    xVals = ParseJsonArray(catStr)
     ParseSeries JsonValue(dataObj, "series"), seriesNames, seriesData
+
+    ' Ensure the slide is active (Mac quirk for chart creation)
+    EnsureSlideActive sld
+    DoEvents
+
+    ' Remove the placeholder and rely on shape APIs (InsertChart is unreliable on Mac)
+    On Error Resume Next
+    placeholder.Delete
+    On Error GoTo 0
+    On Error Resume Next
+
+    ' Legacy AddChart first if hinted
+    If preferLegacy Then
+        Err.Clear
+        Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
+        If Err.Number = 0 And Not chartShape Is Nothing Then created = True
+    End If
+
+    ' Try AddChart2 with multiple styles/layout flags
+    If Not created Then
+        For styleIdx = LBound(styleCandidates) To UBound(styleCandidates)
+            For layoutIdx = LBound(layoutOptions) To UBound(layoutOptions)
+                Err.Clear
+                Set chartShape = sld.Shapes.AddChart2(styleCandidates(styleIdx), chartType, l, t, w, h, layoutOptions(layoutIdx))
+                If Err.Number = 0 And Not chartShape Is Nothing Then
+                    created = True
+                    Exit For
+                End If
+            Next layoutIdx
+            If created Then Exit For
+        Next styleIdx
+    End If
+
+    ' Try AddChart (modern) if we still do not have a shape
+    If Not created Then
+        Err.Clear
+        Set chartShape = sld.Shapes.AddChart(chartType, l, t, w, h)
+        If Err.Number = 0 And Not chartShape Is Nothing Then created = True
+    End If
+
+    ' Try AddChart without geometry and reposition manually
+    If Not created Then
+        Err.Clear
+        Set chartShape = sld.Shapes.AddChart(chartType)
+        If Err.Number = 0 And Not chartShape Is Nothing Then
+            chartShape.Left = l
+            chartShape.Top = t
+            chartShape.Width = w
+            chartShape.Height = h
+            created = True
+        End If
+    End If
+
+    ' Try AddChart2 without geometry and reposition
+    If Not created Then
+        For styleIdx = LBound(styleCandidates) To UBound(styleCandidates)
+            For layoutIdx = LBound(layoutOptions) To UBound(layoutOptions)
+                Err.Clear
+                Set chartShape = sld.Shapes.AddChart2(styleCandidates(styleIdx), chartType)
+                If Err.Number = 0 And Not chartShape Is Nothing Then
+                    chartShape.Left = l
+                    chartShape.Top = t
+                    chartShape.Width = w
+                    chartShape.Height = h
+                    created = True
+                    Exit For
+                End If
+            Next layoutIdx
+            If created Then Exit For
+        Next styleIdx
+    End If
+
+    If Not created Then
+        On Error GoTo 0
+        LogWarning "W1003", "Chart placeholder converted to data table after AddChart/AddChart2 failures"
+        Set fallbackBox = sld.Shapes.AddTable(UBound(xVals) + 2, UBound(seriesNames) + 2, l, t, w, h)
+        With fallbackBox.Table
+            Dim headerIdx As Long
+            .Cell(1, 1).Shape.TextFrame.TextRange.text = "Category"
+            For headerIdx = 0 To UBound(seriesNames)
+                .Cell(1, headerIdx + 2).Shape.TextFrame.TextRange.text = seriesNames(headerIdx)
+            Next headerIdx
+            Dim rowIdx As Long
+            For rowIdx = 0 To UBound(xVals)
+                .Cell(rowIdx + 2, 1).Shape.TextFrame.TextRange.text = xVals(rowIdx)
+                For headerIdx = 0 To UBound(seriesNames)
+                    .Cell(rowIdx + 2, headerIdx + 2).Shape.TextFrame.TextRange.text = seriesData(headerIdx)(rowIdx)
+                Next headerIdx
+            Next rowIdx
+        End With
+        Exit Sub
+    End If
+
+    On Error GoTo 0
+    chartShape.Left = l
+    chartShape.Top = t
+    chartShape.Width = w
+    chartShape.Height = h
+    Set chartObj = chartShape.Chart
 
     With chartObj.ChartData
         .Activate
@@ -689,10 +888,10 @@ Sub CreateChartAtPlaceholder(sld As Slide, placeholder As Shape, chartSpec As St
 End Sub
 
 ' Create table at placeholder location
-Sub CreateTableAtPlaceholder(sld As Slide, placeholder As Shape, tableSpec As String)
+Sub CreateTableAtPlaceholder(sld As Object, placeholder As Object, tableSpec As String)
     On Error Resume Next
-    Dim tblShape As Shape
-    Dim tbl As Table
+    Dim tblShape As Object
+    Dim tbl As Object
     Dim l As Single, t As Single, w As Single, h As Single
     Dim headers As Variant, rows As Variant
     Dim r As Long, c As Long
@@ -798,7 +997,11 @@ End Sub
 
             elif content_type == "chart":
                 # Handle chart - emit compact JSON (no spaces) for simpler VBA parsing
-                chart_json = json.dumps(content_data, ensure_ascii=False, separators=(",", ":"))
+                chart_payload = dict(content_data)
+                chart_api_hint = slide.get("platform_hints", {}).get("chart_api")
+                if chart_api_hint:
+                    chart_payload["_chart_api"] = chart_api_hint.lower()
+                chart_json = json.dumps(chart_payload, ensure_ascii=False, separators=(",", ":"))
                 chart_escaped = self._vba_escape(chart_json)
                 code.append(f'        CreateChartAtPlaceholder currentSlide, shp, "{chart_escaped}"')
 
@@ -834,14 +1037,14 @@ End Sub
         code.append("        Exit Sub")
         code.append("    End If")
         code.append("")
-        code.append("    Dim pres As Presentation")
-        code.append("    Dim currentSlide As Slide")
-        code.append("    Dim shp As Shape")
-        code.append("    Dim cl As CustomLayout")
+        code.append("    Dim pres As Object")
+        code.append("    Dim currentSlide As Object")
+        code.append("    Dim shp As Object")
+        code.append("    Dim cl As Object")
         code.append("")
         code.append("    Set pres = Application.ActivePresentation")
         code.append("    ")
-        code.append("    ' Initialize layout cache (macOS-safe Collection)")
+        code.append("    ' Initialize layout cache")
         code.append("    Set layoutCache = New Collection")
         code.append("")
         code.append("    ' Pre-cache layouts for performance")
@@ -874,6 +1077,8 @@ End Sub
         code.append("    ' Report outcome")
         code.append("    If ErrorsCount() > 0 Then")
         code.append("        ShowErrors")
+        code.append("    ElseIf WarningsCount() > 0 Then")
+        code.append("        ShowWarnings")
         code.append("    Else")
         code.append(f'        MsgBox "Successfully created {len(self.plan["slides"])} slides!", vbInformation')
         code.append("    End If")
@@ -895,8 +1100,8 @@ End Sub
 
 Sub ValidateTemplate()
     On Error Resume Next
-    Dim pres As Presentation
-    Dim layout As CustomLayout
+    Dim pres As Object
+    Dim layout As Object
     Dim msg As String
 
     Set pres = Application.ActivePresentation
@@ -904,7 +1109,7 @@ Sub ValidateTemplate()
     msg = "Template Validation Report:" & vbCrLf & vbCrLf
     msg = msg & "Template: " & pres.Name & vbCrLf
     msg = msg & "Layouts: " & pres.SlideMaster.CustomLayouts.Count & vbCrLf
-    msg = msg & "Platform: " & PLATFORM & vbCrLf & vbCrLf
+    msg = msg & "Platform: macOS" & vbCrLf & vbCrLf
 
     ' Check required layouts
     Dim requiredLayouts As Variant
@@ -966,7 +1171,7 @@ def main():
     print(f"✓ Script saved to: {output_path}")
     print("\nNext steps:")
     print("1. Open your PowerPoint template")
-    print("2. Press Alt+F11 (Windows) or Opt+F11 (Mac)")
+    print("2. Press Opt+F11 (Mac)")
     print("3. Insert > Module")
     print("4. Paste the generated script")
     print("5. Run 'ValidateTemplate' to check compatibility")

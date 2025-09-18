@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "title": "Digital Transformation Strategy",
+    "author": "Test Presentation",
+    "description": "A 10-slide presentation on digital transformation"
+  },
+  "slides": [
+    {
+      "layout": "Title Slide",
+      "placeholders": {
+        "CenterTitle": "Digital Transformation",
+        "Subtitle": "Driving Innovation in the Modern Enterprise"
+      }
+    },
+    {
+      "layout": "section-header-bold",
+      "placeholders": {
+        "Title": "The Digital Revolution"
+      }
+    },
+    {
+      "layout": "Title and Text",
+      "placeholders": {
+        "Title": "What is Digital Transformation?",
+        "Body": "• Integrating digital technology into all business areas\n• Fundamentally changing operations and value delivery\n• Cultural shift toward experimentation and agility\n• Customer-centric approach to innovation"
+      }
+    },
+    {
+      "layout": "title-two-text",
+      "placeholders": {
+        "Title": "Key Technologies Driving Change",
+        "Body[0]": "Cloud Computing:\n• Scalable infrastructure\n• Cost optimization\n• Global accessibility\n\nArtificial Intelligence:\n• Automation\n• Predictive analytics\n• Enhanced decision-making",
+        "Body[1]": "Internet of Things:\n• Connected devices\n• Real-time data\n• Smart operations\n\nBlockchain:\n• Security\n• Transparency\n• Decentralization"
+      }
+    },
+    {
+      "layout": "Title, Chart and Text",
+      "placeholders": {
+        "Title": "Digital Adoption Trends",
+        "Body": "• 70% of companies have a digital strategy\n• Cloud adoption grew 25% year-over-year\n• AI implementation increased by 37%\n• Remote work tools usage up 300%",
+        "Chart": {
+          "type": "column",
+          "data": {
+            "categories": ["2020", "2021", "2022", "2023", "2024"],
+            "series": [
+              {"name": "Cloud", "values": [45, 56, 68, 78, 85]},
+              {"name": "AI/ML", "values": [20, 28, 39, 48, 57]},
+              {"name": "IoT", "values": [15, 22, 31, 38, 45]}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "layout": "title-three-text",
+      "placeholders": {
+        "Title": "Strategic Pillars",
+        "Body[0]": "Customer Experience\n\n• Personalization\n• Omnichannel presence\n• Real-time support\n• Data-driven insights",
+        "Body[1]": "Operational Excellence\n\n• Process automation\n• Efficiency gains\n• Cost reduction\n• Quality improvement",
+        "Body[2]": "Business Model Innovation\n\n• New revenue streams\n• Platform economies\n• Subscription models\n• Digital products"
+      }
+    },
+    {
+      "layout": "Title and Text",
+      "placeholders": {
+        "Title": "Implementation Roadmap",
+        "Body": "Phase 1: Assessment (Months 1-2)\n• Current state analysis\n• Gap identification\n• Stakeholder alignment\n\nPhase 2: Planning (Months 3-4)\n• Strategy development\n• Resource allocation\n• Timeline creation\n\nPhase 3: Execution (Months 5-12)\n• Pilot programs\n• Scaling initiatives\n• Continuous monitoring"
+      }
+    },
+    {
+      "layout": "title-four-text",
+      "placeholders": {
+        "Title": "Success Factors",
+        "Body[0]": "Leadership\n• Executive sponsorship\n• Clear vision\n• Change champions",
+        "Body[1]": "Culture\n• Growth mindset\n• Innovation focus\n• Risk tolerance",
+        "Body[2]": "Technology\n• Modern infrastructure\n• Integration capabilities\n• Security focus",
+        "Body[3]": "Talent\n• Digital skills\n• Continuous learning\n• Cross-functional teams"
+      }
+    },
+    {
+      "layout": "title-one-quote",
+      "placeholders": {
+        "Title": "Key Takeaway",
+        "Body": "\"Digital transformation is not about technology—it's about talent, process, and organizational change management.\"\n\n— Thomas Davenport, Analytics Expert"
+      }
+    },
+    {
+      "layout": "contact-slide-white",
+      "placeholders": {
+        "Title": "Thank You",
+        "Body": "Questions & Discussion\n\nContact:\nemail@example.com\nwww.company.com\n\nLet's Transform Together!"
+      }
+    }
+  ]
+}

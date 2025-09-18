@@ -1,30 +1,30 @@
 {
   "meta": {
-    "template_name": "Standard Template.pptx",
-    "analysis_date": "2024-01-15T10:30:00Z",
-    "total_layouts": 11,
+    "template_name": "ic-template-1.pptx",
+    "analysis_date": "2025-09-17T12:36:45Z",
+    "total_layouts": 59,
     "platform_targets": [
       "macos",
       "windows"
     ],
     "planner_version": "4.0-python",
-    "created_at": "2025-09-17T01:10:43Z"
+    "created_at": "2025-09-17T06:55:20Z"
   },
   "layout_strategy": {
-    "title_slide_index": 1,
-    "two_column_index": 2,
-    "three_column_index": 2,
-    "chart_layout_index": 2,
-    "standard_content_index": 2,
-    "contact_index": 2
+    "title_slide_index": 58,
+    "two_column_index": 6,
+    "three_column_index": 8,
+    "chart_layout_index": 59,
+    "standard_content_index": 56,
+    "contact_index": 54
   },
   "slides": [
     {
       "slide_number": 1,
-      "slide_title": "Test Presentation",
+      "slide_title": "Digital Transformation Strategy",
       "selected_layout": {
         "name": "Title Slide",
-        "index": 1,
+        "index": 58,
         "reason": "exact_name_match"
       },
       "addressing": "by_type_then_ordinal",
@@ -52,23 +52,55 @@
           "type_id": 3,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "Welcome to the Test"
+          "content_data": "Digital Transformation"
         },
         {
           "placeholder_type": "Subtitle",
           "type_id": 4,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "A Simple Example"
+          "content_data": "Driving Innovation in the Modern Enterprise"
         }
       ]
     },
     {
       "slide_number": 2,
-      "slide_title": "Agenda",
+      "slide_title": "The Digital Revolution",
       "selected_layout": {
-        "name": "Title and Content",
+        "name": "section-header-bold",
         "index": 2,
+        "reason": "exact_name_match"
+      },
+      "addressing": "by_type_then_ordinal",
+      "fill_policy": "strict_match",
+      "placeholders_expected": [
+        {
+          "type": "Title",
+          "type_id": 1,
+          "ordinal": 0
+        }
+      ],
+      "platform_hints": {
+        "mac_safe": true,
+        "chart_api": "AddChart",
+        "text_api": "TextFrame2_with_fallback"
+      },
+      "content_map": [
+        {
+          "placeholder_type": "Title",
+          "type_id": 1,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "The Digital Revolution"
+        }
+      ]
+    },
+    {
+      "slide_number": 3,
+      "slide_title": "What is Digital Transformation?",
+      "selected_layout": {
+        "name": "Title and Text",
+        "index": 56,
         "reason": "exact_name_match"
       },
       "addressing": "by_type_then_ordinal",
@@ -96,23 +128,23 @@
           "type_id": 1,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "Agenda"
+          "content_data": "What is Digital Transformation?"
         },
         {
           "placeholder_type": "Body",
           "type_id": 2,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "• Introduction\n• Main Content\n• Conclusion"
+          "content_data": "• Integrating digital technology into all business areas\n• Fundamentally changing operations and value delivery\n• Cultural shift toward experimentation and agility\n• Customer-centric approach to innovation"
         }
       ]
     },
     {
-      "slide_number": 3,
-      "slide_title": "Comparison",
+      "slide_number": 4,
+      "slide_title": "Key Technologies Driving Change",
       "selected_layout": {
-        "name": "Two Content",
-        "index": 4,
+        "name": "title-two-text",
+        "index": 6,
         "reason": "exact_name_match"
       },
       "addressing": "by_type_then_ordinal",
@@ -145,21 +177,400 @@
           "type_id": 1,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "Comparison"
+          "content_data": "Key Technologies Driving Change"
         },
         {
           "placeholder_type": "Body",
           "type_id": 2,
           "ordinal": 0,
           "content_type": "text",
-          "content_data": "Left Side:\n• Point 1\n• Point 2"
+          "content_data": "Cloud Computing:\n• Scalable infrastructure\n• Cost optimization\n• Global accessibility\n\nArtificial Intelligence:\n• Automation\n• Predictive analytics\n• Enhanced decision-making"
         },
         {
           "placeholder_type": "Body",
           "type_id": 2,
           "ordinal": 1,
           "content_type": "text",
-          "content_data": "Right Side:\n• Point A\n• Point B"
+          "content_data": "Internet of Things:\n• Connected devices\n• Real-time data\n• Smart operations\n\nBlockchain:\n• Security\n• Transparency\n• Decentralization"
+        }
+      ]
+    },
+    {
+      "slide_number": 5,
+      "slide_title": "Digital Adoption Trends",
+      "selected_layout": {
+        "name": "Title, Chart and Text",
+        "index": 57,
+        "reason": "exact_name_match"
+      },
+      "addressing": "by_type_then_ordinal",
+      "fill_policy": "strict_match",
+      "placeholders_expected": [
+        {
+          "type": "Title",
+          "type_id": 1,
+          "ordinal": 0
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 0
+        },
+        {
+          "type": "Chart",
+          "type_id": 8,
+          "ordinal": 0
+        }
+      ],
+      "platform_hints": {
+        "mac_safe": true,
+        "chart_api": "AddChart",
+        "text_api": "TextFrame2_with_fallback"
+      },
+      "content_map": [
+        {
+          "placeholder_type": "Title",
+          "type_id": 1,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Digital Adoption Trends"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "• 70% of companies have a digital strategy\n• Cloud adoption grew 25% year-over-year\n• AI implementation increased by 37%\n• Remote work tools usage up 300%"
+        },
+        {
+          "placeholder_type": "Chart",
+          "type_id": 8,
+          "ordinal": 0,
+          "content_type": "chart",
+          "content_data": {
+            "type": "column",
+            "data": {
+              "categories": [
+                "2020",
+                "2021",
+                "2022",
+                "2023",
+                "2024"
+              ],
+              "series": [
+                {
+                  "name": "Cloud",
+                  "values": [
+                    45,
+                    56,
+                    68,
+                    78,
+                    85
+                  ]
+                },
+                {
+                  "name": "AI/ML",
+                  "values": [
+                    20,
+                    28,
+                    39,
+                    48,
+                    57
+                  ]
+                },
+                {
+                  "name": "IoT",
+                  "values": [
+                    15,
+                    22,
+                    31,
+                    38,
+                    45
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slide_number": 6,
+      "slide_title": "Strategic Pillars",
+      "selected_layout": {
+        "name": "title-three-text",
+        "index": 8,
+        "reason": "exact_name_match"
+      },
+      "addressing": "by_type_then_ordinal",
+      "fill_policy": "strict_match",
+      "placeholders_expected": [
+        {
+          "type": "Title",
+          "type_id": 1,
+          "ordinal": 0
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 0
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 1
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 2
+        }
+      ],
+      "platform_hints": {
+        "mac_safe": true,
+        "chart_api": "AddChart",
+        "text_api": "TextFrame2_with_fallback"
+      },
+      "content_map": [
+        {
+          "placeholder_type": "Title",
+          "type_id": 1,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Strategic Pillars"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Customer Experience\n\n• Personalization\n• Omnichannel presence\n• Real-time support\n• Data-driven insights"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 1,
+          "content_type": "text",
+          "content_data": "Operational Excellence\n\n• Process automation\n• Efficiency gains\n• Cost reduction\n• Quality improvement"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 2,
+          "content_type": "text",
+          "content_data": "Business Model Innovation\n\n• New revenue streams\n• Platform economies\n• Subscription models\n• Digital products"
+        }
+      ]
+    },
+    {
+      "slide_number": 7,
+      "slide_title": "Implementation Roadmap",
+      "selected_layout": {
+        "name": "Title and Text",
+        "index": 56,
+        "reason": "exact_name_match"
+      },
+      "addressing": "by_type_then_ordinal",
+      "fill_policy": "strict_match",
+      "placeholders_expected": [
+        {
+          "type": "Title",
+          "type_id": 1,
+          "ordinal": 0
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 0
+        }
+      ],
+      "platform_hints": {
+        "mac_safe": true,
+        "chart_api": "AddChart",
+        "text_api": "TextFrame2_with_fallback"
+      },
+      "content_map": [
+        {
+          "placeholder_type": "Title",
+          "type_id": 1,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Implementation Roadmap"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Phase 1: Assessment (Months 1-2)\n• Current state analysis\n• Gap identification\n• Stakeholder alignment\n\nPhase 2: Planning (Months 3-4)\n• Strategy development\n• Resource allocation\n• Timeline creation\n\nPhase 3: Execution (Months 5-12)\n• Pilot programs\n• Scaling initiatives\n• Continuous monitoring"
+        }
+      ]
+    },
+    {
+      "slide_number": 8,
+      "slide_title": "Success Factors",
+      "selected_layout": {
+        "name": "title-four-text",
+        "index": 10,
+        "reason": "exact_name_match"
+      },
+      "addressing": "by_type_then_ordinal",
+      "fill_policy": "strict_match",
+      "placeholders_expected": [
+        {
+          "type": "Title",
+          "type_id": 1,
+          "ordinal": 0
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 0
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 1
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 2
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 3
+        }
+      ],
+      "platform_hints": {
+        "mac_safe": true,
+        "chart_api": "AddChart",
+        "text_api": "TextFrame2_with_fallback"
+      },
+      "content_map": [
+        {
+          "placeholder_type": "Title",
+          "type_id": 1,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Success Factors"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Leadership\n• Executive sponsorship\n• Clear vision\n• Change champions"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 1,
+          "content_type": "text",
+          "content_data": "Culture\n• Growth mindset\n• Innovation focus\n• Risk tolerance"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 2,
+          "content_type": "text",
+          "content_data": "Technology\n• Modern infrastructure\n• Integration capabilities\n• Security focus"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 3,
+          "content_type": "text",
+          "content_data": "Talent\n• Digital skills\n• Continuous learning\n• Cross-functional teams"
+        }
+      ]
+    },
+    {
+      "slide_number": 9,
+      "slide_title": "Key Takeaway",
+      "selected_layout": {
+        "name": "title-one-quote",
+        "index": 48,
+        "reason": "exact_name_match"
+      },
+      "addressing": "by_type_then_ordinal",
+      "fill_policy": "strict_match",
+      "placeholders_expected": [
+        {
+          "type": "Title",
+          "type_id": 1,
+          "ordinal": 0
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 0
+        }
+      ],
+      "platform_hints": {
+        "mac_safe": true,
+        "chart_api": "AddChart",
+        "text_api": "TextFrame2_with_fallback"
+      },
+      "content_map": [
+        {
+          "placeholder_type": "Title",
+          "type_id": 1,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Key Takeaway"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "\"Digital transformation is not about technology—it's about talent, process, and organizational change management.\"\n\n— Thomas Davenport, Analytics Expert"
+        }
+      ]
+    },
+    {
+      "slide_number": 10,
+      "slide_title": "Thank You",
+      "selected_layout": {
+        "name": "contact-slide-white",
+        "index": 54,
+        "reason": "exact_name_match"
+      },
+      "addressing": "by_type_then_ordinal",
+      "fill_policy": "strict_match",
+      "placeholders_expected": [
+        {
+          "type": "Title",
+          "type_id": 1,
+          "ordinal": 0
+        },
+        {
+          "type": "Body",
+          "type_id": 2,
+          "ordinal": 0
+        }
+      ],
+      "platform_hints": {
+        "mac_safe": true,
+        "chart_api": "AddChart",
+        "text_api": "TextFrame2_with_fallback"
+      },
+      "content_map": [
+        {
+          "placeholder_type": "Title",
+          "type_id": 1,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Thank You"
+        },
+        {
+          "placeholder_type": "Body",
+          "type_id": 2,
+          "ordinal": 0,
+          "content_type": "text",
+          "content_data": "Questions & Discussion\n\nContact:\nemail@example.com\nwww.company.com\n\nLet's Transform Together!"
         }
       ]
     }
@@ -172,17 +583,17 @@
       "content_fidelity_exact"
     ],
     "errors": [],
-    "warnings": [
-      "Layout 'title-two-text' not found. Using 'Title and Content' (index 2) as fallback.",
-      "Layout 'title-three-text' not found. Using 'Title and Content' (index 2) as fallback.",
-      "Layout 'Title, Text and Chart' not found. Using 'Title and Content' (index 2) as fallback.",
-      "Layout 'Title and Text' not found. Using 'Title and Content' (index 2) as fallback.",
-      "Layout 'contact-slide-white' not found. Using 'Title and Content' (index 2) as fallback."
-    ]
+    "warnings": []
   },
   "layout_usage_summary": {
     "Title Slide": 1,
-    "Title and Content": 1,
-    "Two Content": 1
+    "section-header-bold": 1,
+    "Title and Text": 2,
+    "title-two-text": 1,
+    "Title, Chart and Text": 1,
+    "title-three-text": 1,
+    "title-four-text": 1,
+    "title-one-quote": 1,
+    "contact-slide-white": 1
   }
 }
