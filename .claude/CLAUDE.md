@@ -1,214 +1,125 @@
-# CLAUDE.md: PowerPoint Automation System - Python Pipeline
+# CLAUDE.md: PowerPoint Automation with Claude Code
 
-This document describes the deterministic Python pipeline for PowerPoint automation. The system transforms content outlines into VBA scripts without any AI interpretation or token usage after initial setup.
+This repository enables direct PowerPoint creation and editing through Claude Code using the `python-pptx` library and office skills workflows.
 
-## 1. System Overview
-
-The PowerPoint Automation System is a **deterministic Python pipeline** that:
-- Takes structured JSON input (outline + template analysis)
-- Produces ready-to-run VBA scripts
-- Requires zero AI tokens after initial outline creation
-- Works on both Windows and macOS PowerPoint
-
-**Key Principle: Same input → Same output, every time**
-
-## 2. Pipeline Architecture
-
-```
-outline.json + template_analysis.json → slide_plan.json → generated_script.vba
-```
-
-### Core Components
-
-- **`universal_template_analyzer.vba`**: VBA script that analyzes PowerPoint templates
-- **`outline_to_plan.py`**: Converts user outline to structured plan
-- **`plan_to_vba.py`**: Generates VBA script from plan
-- **`workflow.py`**: Main orchestrator
-
-### Data Flow
-
-1. **Template Analysis** (One-time per template)
-   - User runs `universal_template_analyzer.vba` in PowerPoint
-   - Produces `template_analysis.json`
-
-2. **Outline Creation** (Per presentation)
-   - User creates `outline.json` with slide content
-   - Structured JSON format with layouts and placeholders
-
-3. **Python Processing** (Deterministic)
-   - `outline_to_plan.py`: Maps content to template layouts
-   - `plan_to_vba.py`: Generates VBA script
-   - No AI calls, pure Python logic
-
-4. **VBA Execution**
-   - User runs generated script in PowerPoint
-   - Slides added to active presentation
-
-## 3. Key Features
-
-### Deterministic Processing
-- No LLM interpretation
-- Strict layout/placeholder mapping
-- Predictable, testable output
-
-### macOS Compatibility
-- Uses Collection instead of Scripting.Dictionary
-- No ActiveX dependencies
-- Works on Mac PowerPoint
-
-### No Image Handling
-- Images deliberately excluded from automation
-- Users add images manually after slide creation
-- Prevents file path and compatibility issues
-
-## 4. VBA Script Requirements
-
-Generated scripts MUST:
-
-1. **Use Active Presentation**
-   ```vba
-   Set pres = Application.ActivePresentation
-   ```
-
-2. **Have Main() Entry Point**
-   ```vba
-   Sub Main()  ' User runs with F5
-   ```
-
-3. **Use Collection-based Cache (macOS)**
-   ```vba
-   Dim layoutCache As Collection
-   Set layoutCache = New Collection
-   ```
-
-4. **Skip Image Placeholders**
-   ```vba
-   ' Image placeholder skipped
-   ' User will add image manually
-   ```
-
-## 5. Outline Format
-
-### Basic Structure
-```json
-{
-  "meta": {
-    "title": "Presentation Title",
-    "author": "Author Name"
-  },
-  "slides": [
-    {
-      "layout": "Title Slide",
-      "placeholders": {
-        "Title": "Welcome",
-        "Subtitle": "Subtitle text"
-      }
-    }
-  ]
-}
-```
-
-### Placeholder Types
-- **Text**: Title, Body, Subtitle
-- **Charts**: Column, Bar, Pie (with data object)
-- **Tables**: Headers and rows arrays
-- **Images**: Skipped (manual addition)
-
-### Using Ordinals
-For multiple placeholders of same type:
-```json
-{
-  "Body[0]": "Left content",
-  "Body[1]": "Right content"
-}
-```
-
-## 6. Python Pipeline Details
-
-### outline_to_plan.py
-- Validates outline structure
-- Matches layouts to template
-- Resolves placeholder mappings
-- Produces `slide_plan.json`
-
-### plan_to_vba.py
-- Generates VBA from plan
-- Creates macOS-compatible code
-- Skips image handling
-- Includes validation checks
-
-### Key Mappings
-```python
-TYPE_MAP = {
-    "title": (1, "Title"),
-    "body": (2, "Body"),
-    "centertitle": (3, "CenterTitle"),
-    "subtitle": (4, "Subtitle"),
-    # ... more mappings
-}
-```
-
-## 7. Usage Workflow
+## Quick Start
 
 ```bash
-# 1. Analyze template (one-time)
-# Run universal_template_analyzer.vba in PowerPoint
+# Install Python dependencies
+python -m venv venv
+venv/bin/pip install -r requirements.txt
 
-# 2. Create outline
-# Write outline.json
-
-# 3. Generate VBA
-cd ppt_workflow
-python workflow.py outline.json template_analysis.json
-
-# 4. Run in PowerPoint
-# Paste output/generated_script.vba and run Main()
+# Install Node.js dependencies (for HTML-to-PPTX)
+npm install
 ```
 
-## 8. Troubleshooting
+## How It Works
 
-### Common Issues
+Simply ask Claude Code to create or edit PowerPoint files:
 
-| Issue | Solution |
-|-------|----------|
-| Layout not found | Check exact names in template_analysis.json |
-| Placeholder missing | Verify type exists in layout |
-| macOS error 429 | Ensure using Collection, not Dictionary |
-| Images not appearing | Expected - add manually |
+```
+> Create a quarterly sales presentation using my template at templates/ic-template-1.pptx
+> Add 3 slides to my presentation about product features
+> Edit the title slide to say "Q4 Results"
+```
 
-### Validation
+Claude Code will:
+1. Check the skills system for the appropriate workflow
+2. Read the `skills/public/pptx/SKILL.md` workflow
+3. Execute each step (thumbnails, inventory, replacements, etc.)
+4. Save outputs to `outputs/<document-name>/`
 
-Run validator to check all stages:
+## Repository Structure
+
+```
+├── skills/                    # Claude office skills (cloned repo)
+│   └── public/
+│       ├── pptx/             # PowerPoint workflows
+│       │   ├── SKILL.md      # Main PPTX workflow
+│       │   ├── html2pptx.md  # HTML-to-PPTX guide
+│       │   ├── ooxml.md      # OOXML editing guide
+│       │   └── scripts/      # Python utilities
+│       ├── docx/             # Word workflows
+│       ├── xlsx/             # Excel workflows
+│       └── pdf/              # PDF workflows
+├── templates/                 # Your PowerPoint templates
+├── outputs/                   # Generated files (gitignored)
+└── venv/                      # Python virtual environment
+```
+
+## Key Commands
+
+### PowerPoint Operations
+
+**Create thumbnails for template analysis:**
 ```bash
-python utils/validator.py outline.json template_analysis.json slide_plan.json script.vba
+venv/bin/python skills/public/pptx/scripts/thumbnail.py templates/my-template.pptx outputs/project/thumbnails
 ```
 
-## 9. Design Decisions
+**Extract text inventory:**
+```bash
+venv/bin/python skills/public/pptx/scripts/inventory.py presentation.pptx outputs/project/inventory.json
+```
 
-### Why Python Pipeline?
-- Deterministic output
-- Zero token usage
-- Fast local execution
-- Easy debugging
-- Testable functions
+**Rearrange/duplicate slides:**
+```bash
+venv/bin/python skills/public/pptx/scripts/rearrange.py template.pptx outputs/project/working.pptx 0,5,5,12,3
+```
 
-### Why No Images?
-- File path complexity
-- Cross-platform issues
-- Security concerns
-- User preference for manual control
+**Replace text from JSON:**
+```bash
+venv/bin/python skills/public/pptx/scripts/replace.py input.pptx outputs/project/replacements.json outputs/project/final.pptx
+```
 
-### Why Collection vs Dictionary?
-- macOS VBA doesn't support CreateObject("Scripting.Dictionary")
-- Collection works on all platforms
-- Minimal performance difference
+**Extract text content:**
+```bash
+venv/bin/python -m markitdown presentation.pptx
+```
 
-## 10. Version History
+## Workflow: Creating from Template
 
-- **v5.0**: Complete Python pipeline replacement
-  - Removed all AI agent dependencies
-  - Added macOS compatibility
-  - Removed image handling
-  - Deterministic processing
+1. **Generate thumbnails** to understand template structure
+2. **Create template inventory** listing all slides with indices
+3. **Plan slide selection** based on content needs
+4. **Rearrange slides** using `rearrange.py`
+5. **Extract text inventory** from working presentation
+6. **Generate replacement JSON** with new content
+7. **Apply replacements** using `replace.py`
 
-- **v4.0**: Last agent-based version (deprecated)
+## Output Directory Convention
+
+All generated files go to `outputs/<document-name>/`:
+```
+outputs/
+├── quarterly-report/
+│   ├── thumbnails.jpg
+│   ├── inventory.json
+│   ├── replacements.json
+│   └── final.pptx
+└── sales-deck/
+    └── ...
+```
+
+## Skills System
+
+Before writing custom code, Claude Code checks if a skill exists for the task. Skills are documented in `skills/public/*/SKILL.md` files.
+
+**IMPORTANT**: Always read the full SKILL.md file before starting work. These files contain critical workflow steps and validation requirements.
+
+## Dependencies
+
+### Python (requirements.txt)
+- python-pptx, openpyxl, pypdf
+- defusedxml, lxml
+- Pillow, pdf2image
+- markitdown
+
+### Node.js (package.json)
+- pptxgenjs (HTML-to-PPTX)
+- playwright (HTML rendering)
+- sharp (image processing)
+
+### System Tools
+- LibreOffice (`soffice`) - PDF conversion
+- Poppler (`pdftoppm`) - PDF to images
+- Pandoc - document text extraction
