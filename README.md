@@ -1,183 +1,140 @@
-# PowerPoint Automation System (Robust, Deterministic, Token‑Free)
+# PowerPoint Automation with Claude Code
 
-A small, deterministic Python pipeline that turns an outline.json and a template_analysis.json into a ready‑to‑run VBA macro that builds your slides in the currently open PowerPoint presentation.
+Create and edit PowerPoint presentations directly through Claude Code using `python-pptx` and office skills workflows.
 
-All code lives under `ppt_workflow/`. The system is template‑aware, cross‑platform (Windows/macOS), and designed to be robust and predictable for non‑technical users.
+## What's New
 
-## Highlights
+This repository has been updated to use the [claude-office-skills](https://github.com/tfriedel/claude-office-skills) system, which provides:
 
-- Deterministic output: same input → same slides (no LLM calls)
-- Robust VBA JSON parsing: handles whitespace, escapes, and nested arrays/objects
-- Helpful error codes: grouped summary with machine‑readable codes at the end
-- Template‑aware: uses your template’s layout indices and placeholder geometry
-- Cross‑platform: generated VBA works on Windows and macOS
-- Images optional: image placeholders are skipped; focus on text, charts, tables
+- **Direct interaction** — Ask Claude Code to create/edit presentations naturally
+- **Template preservation** — Work with your existing corporate templates
+- **python-pptx based** — No more VBA scripts or copy-paste workflows
+- **Multi-format support** — Also supports Word, Excel, and PDF
 
-## End‑to‑End Flow
-
-```
-outline.json + template_analysis.json → Python pipeline → output/generated_script.vba → run in PowerPoint
-```
-
-1) Analyze your template (one‑time per template)
-- Open PowerPoint → Alt/Option+F11 → Insert Module → paste `ppt_workflow/vba/universal_template_analyzer.vba`
-- Run `UniversalTemplateAnalyzer` (F5)
-- It writes `template_analysis.json` next to your `.pptx`
-
-2) Create your outline.json
-- You specify slides, layouts (by name), and placeholder content
-- Supported content types: Title, Subtitle, Body, Table, Chart
-- Images can be provided but are ignored by design (add them manually later)
-
-3) Generate the VBA script (Python)
-- `cd ppt_workflow`
-- `python workflow.py outline.json template_analysis.json`
-- Output is `ppt_workflow/output/generated_script.vba`
-
-4) Run the generated script in PowerPoint
-- Open your template → Alt/Option+F11 → Insert Module
-- Paste `generated_script.vba` → Run `Main`
-- If issues occur, a summary dialog lists error codes and details
-
-## Outline Format (Essentials)
-
-Example with text, chart, and table:
-
-```json
-{
-  "meta": { "title": "Q4 Results", "author": "Your Name" },
-  "slides": [
-    {
-      "layout": "Title Slide",
-      "placeholders": {
-        "CenterTitle": "Q4 Financial Results",
-        "Subtitle": "A strong finish"
-      }
-    },
-    {
-      "layout": "Title and Chart",
-      "placeholders": {
-        "Title": "North Star Metrics",
-        "Chart": {
-          "type": "line",
-          "data": {
-            "x": ["Week 1", "Week 2", "Week 3"],
-            "series": [
-              {"name": "WAU", "data": [200, 380, 520]}
-            ]
-          }
-        }
-      }
-    },
-    {
-      "layout": "Title and Table",
-      "placeholders": {
-        "Title": "KPIs",
-        "Table": {
-          "headers": ["Metric", "Value"],
-          "rows": [["Revenue", "25M"], ["Margin", "22%"]]
-        }
-      }
-    }
-  ]
-}
-```
-
-Notes:
-- Layout names must exist in `template_analysis.json` (case‑insensitive)
-- When a layout has multiple placeholders of the same type, use ordinals: `Body[0]`, `Body[1]`, etc.
-- Images (`Picture`, `SlideImage`) are accepted but skipped during generation
-
-## Error Codes (VBA Summary Dialog)
-
-The generated VBA logs all issues and shows them together at the end. These machine‑readable codes make it easy for an LLM or a human to pinpoint and fix problems.
-
-- E1002 MissingPlaceholder — “Slide N: Missing placeholder Type=Body (type_id=2), Ordinal=1”
-- E1003 ChartCreateFailed — Failed to create chart shape
-- E1005 JsonKeyMissing — Missing required key in chart/table JSON (e.g., `data`, `x`, or `series`)
-- E1007 ActivePresentationMissing — No active presentation is open
-- E1008 LayoutResolveFailed — Layout index referenced by plan not found in the open template
-- E1009 UnsupportedChartType — Chart type not recognized; defaults to column
-- E1011 ChartSourceDataFailed — Could not bind worksheet range to chart
-
-Behavior:
-- Missing placeholders are logged per item; slide creation continues for other content
-- Layout cache issues are logged; macro does not abort the whole run
-- On completion, if any errors were logged, a summary dialog appears; otherwise a success message is shown
-
-## Running the Pipeline
+## Quick Start
 
 ```bash
-# From repo root
-cd ppt_workflow
+# 1. Install Python dependencies
+python -m venv venv
+venv/bin/pip install -r requirements.txt
 
-# Run full workflow (validates inputs, generates plan and VBA)
-python workflow.py outline.json template_analysis.json
-
-# Outputs
-# - ppt_workflow/output/slide_plan.json
-# - ppt_workflow/output/generated_script.vba
+# 2. Install Node.js dependencies (for HTML-to-PPTX)
+npm install
 ```
 
-Advanced: you can run steps individually for debugging:
+## Usage with Claude Code
+
+Simply ask Claude Code what you want:
+
+```
+> Create a 5-slide presentation about Q4 results using templates/ic-template-1.pptx
+> Edit the title slide to say "Annual Review 2024"
+> Add a comparison slide with two columns
+```
+
+Claude Code will:
+1. Analyze your template (thumbnails, text inventory)
+2. Select appropriate slides from the template
+3. Generate replacement content
+4. Apply changes and save to `outputs/`
+
+## Supported Workflows
+
+### From Template (Recommended)
+Use an existing `.pptx` template — preserves branding, fonts, colors, and layouts.
 
 ```bash
-# Step 1 only: Outline → Plan
-python core/outline_to_plan.py outline.json template_analysis.json output/slide_plan.json
+# Generate thumbnails to understand template
+venv/bin/python skills/public/pptx/scripts/thumbnail.py templates/my-template.pptx outputs/project/
 
-# Step 2 only: Plan → VBA
-python core/plan_to_vba.py output/slide_plan.json output/generated_script.vba
+# Rearrange/duplicate slides
+venv/bin/python skills/public/pptx/scripts/rearrange.py template.pptx output.pptx 0,5,5,12,3
 
-# Validate artifacts (optional)
-python utils/validator.py outline.json template_analysis.json output/slide_plan.json output/generated_script.vba
+# Extract text positions
+venv/bin/python skills/public/pptx/scripts/inventory.py presentation.pptx inventory.json
+
+# Replace text from JSON
+venv/bin/python skills/public/pptx/scripts/replace.py input.pptx replacements.json output.pptx
 ```
 
-## macOS Setup and Tips
+### From Scratch
+Create presentations using HTML/CSS design with the html2pptx workflow.
 
-- Use Homebrew `python3` (`brew install python`) and run the workflow with `python3`.
-- Install dependencies with `pip3 install -r requirements-macos.txt`.
-- Open the VBA editor with **Opt+F11** instead of Alt+F11.
-- If macros are disabled, enable them via **PowerPoint → Preferences → Security & Privacy → Macro Security**.
-- You can run macros from the terminal:
+See `skills/public/pptx/html2pptx.md` for details.
 
-```bash
-osascript -e 'tell application "Microsoft PowerPoint" to run macro "Main"'
-```
+### Edit Existing
+Modify presentations using OOXML (raw XML) editing.
 
-- Paths on macOS can be case-sensitive; ensure your `outline.json` and `template_analysis.json` names match exactly.
-- Run `scripts/mac_env_check.py` to verify your Python environment.
+See `skills/public/pptx/ooxml.md` for details.
 
 ## Project Structure
 
 ```
-local-ppt-agents-vba/
-└── ppt_workflow/
-    ├── core/
-    │   ├── outline_to_plan.py      # Outline → Plan (skips images)
-    │   └── plan_to_vba.py          # Plan → VBA (robust JSON parsing, error codes)
-    ├── utils/
-    │   └── validator.py            # Validation utilities
-    ├── vba/
-    │   └── universal_template_analyzer.vba  # Template analyzer macro
-    ├── examples/                   # Example outline and analysis
-    ├── data/                       # Template analysis samples
-    ├── output/                     # Generated files (git-ignored)
-    └── workflow.py                 # Orchestrator
+├── skills/                    # Claude office skills
+│   └── public/
+│       ├── pptx/             # PowerPoint workflows
+│       │   ├── SKILL.md      # Main workflow doc
+│       │   ├── scripts/      # Python utilities
+│       │   ├── html2pptx.md  # Create from HTML
+│       │   └── ooxml.md      # XML editing
+│       ├── docx/             # Word documents
+│       ├── xlsx/             # Excel spreadsheets
+│       └── pdf/              # PDF manipulation
+├── templates/                 # Your PowerPoint templates
+├── outputs/                   # Generated files (gitignored)
+├── requirements.txt          # Python dependencies
+└── package.json              # Node.js dependencies
 ```
 
-## Testing
+## Key Features
 
-```bash
-python -m unittest discover -s ppt_workflow/tests -p 'test_*.py'
+| Feature | Description |
+|---------|-------------|
+| Template-based | Preserves your corporate branding |
+| Cross-platform | Works on Windows, macOS, Linux |
+| Visual validation | Thumbnail grids catch layout issues |
+| Text replacement | JSON-based content replacement |
+| Slide rearrangement | Duplicate, reorder, delete slides |
+| HTML-to-PPTX | Design slides in HTML/CSS |
+| OOXML editing | Direct XML manipulation |
+
+## Dependencies
+
+### Python
+- python-pptx, openpyxl, pypdf
+- defusedxml, lxml, Pillow
+- markitdown (text extraction)
+
+### Node.js
+- pptxgenjs, playwright, sharp
+
+### System Tools
+- LibreOffice (`soffice`) — PDF conversion
+- Poppler (`pdftoppm`) — PDF to images
+- Pandoc — document extraction
+
+## Output Directory
+
+All generated files go to `outputs/<project-name>/`:
+
+```
+outputs/
+├── quarterly-report/
+│   ├── thumbnails.jpg
+│   ├── inventory.json
+│   ├── replacements.json
+│   └── final.pptx
+└── sales-deck/
+    └── ...
 ```
 
-The tests cover outline→plan basics, VBA generation presence checks, and robustness (image skipping and compact JSON emission).
+## Documentation
 
-## Troubleshooting
+- **Getting started**: See `.claude/CLAUDE.md`
+- **Development**: See `AGENTS.md`
+- **Skills system**: See `skills/CLAUDE.md`
+- **PowerPoint workflows**: See `skills/public/pptx/SKILL.md`
 
-- Layout not found: verify the layout name exists in `template_analysis.json` (case‑insensitive). Consider using a different layout present in the template.
-- Missing placeholder: confirm the placeholder type and ordinal exist in that layout.
-- Chart/table issues: ensure JSON matches the documented shape. The error summary will indicate the missing key (E1005).
+## Attribution
 
-If you encounter an error, copy the final error summary (codes + details) and feed it to an LLM for a concise fix suggestion.
-
+Office skills from [tfriedel/claude-office-skills](https://github.com/tfriedel/claude-office-skills).

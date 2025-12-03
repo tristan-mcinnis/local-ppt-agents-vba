@@ -1,3 +1,16 @@
 .DS_Store
 __pycache__/
 *.pyc
+
+# Python virtual environment
+venv/
+
+# Node.js
+node_modules/
+
+# Generated outputs
+outputs/
+
+# Temporary files
+*.tmp
+~$*
